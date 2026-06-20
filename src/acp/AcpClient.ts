@@ -362,6 +362,10 @@ export class AcpClient {
 
         switch (kind) {
             case 'agent_message_chunk': {
+                // Accumulate incremental text chunks into buffer.
+                // Assumption: ACP sends INCREMENTAL text per chunk (spec-compliant).
+                // If an agent sends the FULL text each time instead, this will
+                // double-append. The SDK's readText() uses the same += pattern.
                 const content = update.content;
                 const text = content?.text || content?.content?.text || '';
                 if (text) {
