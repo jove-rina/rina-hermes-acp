@@ -359,8 +359,23 @@ New Chat：
 | Phase 1 新建会话 | ✅ 复用连接，快速切换 |
 | Phase 2 中断响应 | ✅ ⏹ 按钮闭环 |
 | Phase 2 Markdown / 代码插入 / @file | ✅ 全部实现 |
-| Phase 2 会话管理 | ✅ 列表/删除 |
+| Phase 2 会话管理 | ✅ 列表/删除/切换 |
 | Phase 3 编辑器 / 终端 / 设置 | ✅ 全部实现 |
+
+---
+
+## CR #3 完成情况
+
+第三轮代码审查（`CODE_REVIEW_3.md`）中识别的 19 项问题**已全部关闭**：
+
+| 优先级 | 项数 | 状态 |
+|--------|------|------|
+| **P0** | 5 项（#3-1 ~ #3-5） | ✅ Terminal output、持久化、exit 竞态、CDN vendor |
+| **P1** | 8 项（#3-6 ~ #3-13） | ✅ 会话切换、Terminal args、fs 边界、XSS、测试 |
+| **P2** | 5 项（D-1 ~ D-5） | ✅ 模块拆分、状态统一、stderr 日志 |
+| **P3** | 5 项（#3-14 ~ #3-20） | ✅ status dot、writeTextFile、.vscodeignore 等 |
+
+详见 `CODE_REVIEW_3.md`。
 
 ---
 
