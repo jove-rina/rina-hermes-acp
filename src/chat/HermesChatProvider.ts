@@ -891,11 +891,11 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     }
 
     private _postPluginInfo(): void {
-        const ext = vscode.extensions.getExtension('jove-rina.hermes-agent-chat');
+        const ext = vscode.extensions.getExtension('JoveRina.jove-rina.hermes-ai-chat');
         const pkg = ext?.packageJSON;
         this._postMessage({
             type: 'pluginInfo',
-            displayName: pkg?.displayName || 'Hermes Agent Chat',
+            displayName: pkg?.displayName || 'Hermes AI Chat',
             version: pkg?.version || '',
             publisher: pkg?.publisher || '',
             description: pkg?.description || '',
@@ -906,7 +906,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private async _openSettings(): Promise<void> {
         await vscode.commands.executeCommand(
             'workbench.action.openSettings',
-            '@ext:jove-rina.hermes-agent-chat'
+            '@ext:JoveRina.jove-rina.hermes-ai-chat'
         );
     }
 

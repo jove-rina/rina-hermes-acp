@@ -1,8 +1,8 @@
 {
-  "name": "hermes-agent-chat",
+  "name": "hermes-ai-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "JoveRina",
   "icon": "media/icon.png",
   "license": "MIT",
@@ -144,6 +144,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jove-rina/hermes-agent-chat"
+    "url": "https://github.com/jove-rina/hermes-ai-chat"
   }
 }

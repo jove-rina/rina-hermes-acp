@@ -1,4 +1,4 @@
-# Hermes Agent Chat
+# Hermes AI Chat
 
 **在 VS Code 中直接与 [Hermes Agent](https://hermes-agent.nousresearch.com) 对话 —— 无需切换终端。**
 
@@ -8,7 +8,7 @@
 
 ## 产品简介
 
-Hermes Agent Chat 是一款 VS Code 扩展，将本地 Hermes Agent 接入编辑器侧边栏。你不必在终端和编辑器之间来回切换，即可在写代码的地方完成问答、工具调用与迭代。
+Hermes AI Chat 是一款 VS Code 扩展，将本地 Hermes Agent 接入编辑器侧边栏。你不必在终端和编辑器之间来回切换，即可在写代码的地方完成问答、工具调用与迭代。
 
 扩展通过 [Agent Client Protocol (ACP)](https://agentclientprotocol.com) 连接本地 `hermes acp` 子进程：回复实时流式输出并支持 Markdown 渲染；代码块可一键插入编辑器；消息中的文件路径可直接在 VS Code 中打开。
 
@@ -37,34 +37,12 @@ Hermes Agent Chat 是一款 VS Code 扩展，将本地 Hermes Agent 接入编辑
 - 已安装并配置 **[Hermes Agent](https://hermes-agent.nousresearch.com)**
 - `hermes` 在系统 `PATH` 中可用（或在设置中配置 `hermes.path`）
 
-### 方式一 — VS Code 扩展市场（推荐）
+### 从 VS Code 扩展市场安装
 
 1. 打开 VS Code
 2. 进入 **扩展**（`Ctrl+Shift+X` / `Cmd+Shift+X`）
-3. 搜索 **Hermes Agent Chat**（发布者：**JoveRina**）
+3. 搜索 **Hermes AI Chat** 或 **JoveRina**
 4. 点击 **安装**
-
-### 方式二 — 从 VSIX 安装
-
-```bash
-git clone https://github.com/jove-rina/hermes-agent-chat.git
-cd hermes-agent-chat
-npm install
-npm run package
-```
-
-在 VS Code 中：**扩展** → **⋯** 菜单 → **从 VSIX 安装…** → 选择生成的 `.vsix` 文件。
-
-### 方式三 — 从源码运行（开发）
-
-```bash
-git clone https://github.com/jove-rina/hermes-agent-chat.git
-cd hermes-agent-chat
-npm install
-npm run compile
-```
-
-在 VS Code 中打开项目文件夹，按 **F5** 启动扩展开发宿主。
 
 ### 验证安装
 
@@ -213,11 +191,11 @@ npm run compile
 
 **提交 BUG**
 
-1. 打开 [GitHub Issues](https://github.com/jove-rina/hermes-agent-chat/issues)
+1. 打开 [GitHub Issues](https://github.com/jove-rina/hermes-ai-chat/issues)
 2. 点击 **New issue**
 3. 请尽量包含：
    - VS Code 版本
-   - 扩展版本（如 `0.2.0-beta.1`）
+   - 扩展版本（如 `0.2.1`）
    - Hermes Agent 版本（`hermes --version`）
    - 复现步骤
    - 预期行为 vs 实际行为
@@ -225,12 +203,12 @@ npm run compile
 
 **提交前**
 
-- 先搜索 [已有 Issue](https://github.com/jove-rina/hermes-agent-chat/issues)，避免重复
+- 先搜索 [已有 Issue](https://github.com/jove-rina/hermes-ai-chat/issues)，避免重复
 - 确认 Hermes 在 VS Code 外可正常工作（例如在终端运行 `hermes acp`）
 
 **相关链接**
 
-- 代码仓库：[github.com/jove-rina/hermes-agent-chat](https://github.com/jove-rina/hermes-agent-chat)
+- 代码仓库：[github.com/jove-rina/hermes-ai-chat](https://github.com/jove-rina/hermes-ai-chat)
 - Hermes Agent 文档：[hermes-agent.nousresearch.com](https://hermes-agent.nousresearch.com)
 
 ---

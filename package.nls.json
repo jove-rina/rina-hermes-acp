@@ -6,7 +6,7 @@
   "commands.hermes.newChat.title": "Hermes: New Chat",
   "commands.hermes.openChat.title": "Hermes: Open Chat",
   "commands.hermes.sendSelection.title": "Hermes: Insert Selection into Chat",
-  "configuration.title": "Hermes Agent Chat",
+  "configuration.title": "Hermes AI Chat",
   "configuration.hermes.path.description": "Path to the Hermes executable. Leave empty to auto-detect.",
   "configuration.hermes.cwd.description": "Working directory for Hermes sessions. Defaults to workspace root.",
   "configuration.hermes.profile.description": "Hermes profile name (maps to hermes --profile <name>). Leave empty for default.",

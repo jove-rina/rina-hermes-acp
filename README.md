@@ -1,4 +1,4 @@
-# Hermes Agent Chat
+# Hermes AI Chat
 
 **Chat with [Hermes Agent](https://hermes-agent.nousresearch.com) directly inside VS Code — no terminal switching required.**
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Hermes Agent Chat is a VS Code extension that brings your local Hermes Agent into the editor sidebar. Instead of juggling a separate terminal, you get a full chat experience right where you write code.
+Hermes AI Chat is a VS Code extension that brings your local Hermes Agent into the editor sidebar. Instead of juggling a separate terminal, you get a full chat experience right where you write code.
 
 The extension connects to a local `hermes acp` subprocess over the [Agent Client Protocol (ACP)](https://agentclientprotocol.com), so you can ask questions, run tools, and iterate on code without leaving the IDE. Replies stream in real time with Markdown rendering; code blocks can be inserted into the editor with one click; file paths in messages open directly in VS Code.
 
@@ -37,34 +37,12 @@ The extension connects to a local `hermes acp` subprocess over the [Agent Client
 - **[Hermes Agent](https://hermes-agent.nousresearch.com)** installed and configured
 - `hermes` available on your `PATH` (or set `hermes.path` in Settings)
 
-### Option 1 — VS Code Marketplace (recommended)
+### Install from VS Code Marketplace
 
 1. Open VS Code.
 2. Go to **Extensions** (`Ctrl+Shift+X` / `Cmd+Shift+X`).
-3. Search for **Hermes Agent Chat** (publisher: **JoveRina**).
+3. Search for **Hermes AI Chat** or **JoveRina**.
 4. Click **Install**.
-
-### Option 2 — Install from VSIX
-
-```bash
-git clone https://github.com/jove-rina/hermes-agent-chat.git
-cd hermes-agent-chat
-npm install
-npm run package
-```
-
-In VS Code: **Extensions** → **⋯** menu → **Install from VSIX…** → select the generated `.vsix` file.
-
-### Option 3 — Run from source (development)
-
-```bash
-git clone https://github.com/jove-rina/hermes-agent-chat.git
-cd hermes-agent-chat
-npm install
-npm run compile
-```
-
-Open the folder in VS Code and press **F5** to launch the Extension Development Host.
 
 ### Verify installation
 
@@ -213,11 +191,11 @@ We welcome issues, feature requests, and pull requests.
 
 **Report a bug**
 
-1. Go to [GitHub Issues](https://github.com/jove-rina/hermes-agent-chat/issues)
+1. Go to [GitHub Issues](https://github.com/jove-rina/hermes-ai-chat/issues)
 2. Click **New issue**
 3. Include:
    - VS Code version
-   - Extension version (`0.2.0-beta.1` or later)
+   - Extension version (`0.2.1` or later)
    - Hermes Agent version (`hermes --version`)
    - Steps to reproduce
    - Expected vs. actual behavior
@@ -225,12 +203,12 @@ We welcome issues, feature requests, and pull requests.
 
 **Before filing**
 
-- Search [existing issues](https://github.com/jove-rina/hermes-agent-chat/issues) to avoid duplicates
+- Search [existing issues](https://github.com/jove-rina/hermes-ai-chat/issues) to avoid duplicates
 - Confirm Hermes works outside VS Code (e.g. `hermes acp` in a terminal)
 
 **Other links**
 
-- Repository: [github.com/jove-rina/hermes-agent-chat](https://github.com/jove-rina/hermes-agent-chat)
+- Repository: [github.com/jove-rina/hermes-ai-chat](https://github.com/jove-rina/hermes-ai-chat)
 - Hermes Agent docs: [hermes-agent.nousresearch.com](https://hermes-agent.nousresearch.com)
 
 ---

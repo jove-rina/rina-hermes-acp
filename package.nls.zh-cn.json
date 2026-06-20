@@ -6,7 +6,7 @@
   "commands.hermes.newChat.title": "Hermes：新建对话",
   "commands.hermes.openChat.title": "Hermes：打开聊天",
   "commands.hermes.sendSelection.title": "Hermes：将选中内容插入聊天",
-  "configuration.title": "Hermes Agent Chat",
+  "configuration.title": "Hermes AI Chat",
   "configuration.hermes.path.description": "Hermes 可执行文件路径。留空则自动检测。",
   "configuration.hermes.cwd.description": "Hermes 会话的工作目录。默认为工作区根目录。",
   "configuration.hermes.profile.description": "Hermes profile 名称（对应 hermes --profile <name>）。留空使用默认。",
