@@ -840,22 +840,38 @@ body {
     modelBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         modelDropdown.style.display = modelDropdown.style.display === 'none' ? 'block' : 'none';
+        vscode.postMessage({ type: 'getModels' });
     });
     modelDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
     });
-    function renderModelList(agents) {
+
+    let modelConfigId = '';
+    function renderModelList(payload) {
         const list = document.getElementById('modelList');
-        if (!agents || agents.length === 0) {
-            list.innerHTML = '<div class="model-item" style="color:var(--dim);cursor:default;font-style:italic">Configure agents in Settings</div>';
+        modelConfigId = payload.configId || '';
+        const label = payload.currentLabel || 'default';
+        modelBtn.textContent = label + ' ▾';
+        modelBtn.title = payload.fromAgent
+            ? 'Session model (ACP)'
+            : 'Model preference (local only until agent supports config)';
+
+        if (!payload.models || payload.models.length === 0) {
+            list.innerHTML = '<div class="model-item" style="color:var(--dim);cursor:default;font-style:italic">No models available</div>';
             return;
         }
-        list.innerHTML = agents.map(name =>
-            '<div class="model-item" data-agent="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div>'
-        ).join('');
+        list.innerHTML = payload.models.map(function(m) {
+            const active = m.valueId === payload.currentValueId ? ' ✓' : '';
+            return '<div class="model-item" data-value="' + escapeHtml(m.valueId) + '">' +
+                escapeHtml(m.name) + active + '</div>';
+        }).join('');
         list.querySelectorAll('.model-item').forEach(function(item) {
             item.addEventListener('click', function() {
-                vscode.postMessage({ type: 'switchAgent', agentName: this.dataset.agent });
+                vscode.postMessage({
+                    type: 'switchModel',
+                    configId: modelConfigId,
+                    valueId: this.dataset.value
+                });
                 modelDropdown.style.display = 'none';
             });
         });
@@ -985,7 +1001,10 @@ body {
 
             case 'agentList':
                 renderAgentList(msg.agents);
-                renderModelList(msg.agents);
+                break;
+
+            case 'modelList':
+                renderModelList(msg);
                 break;
 
             case 'log':
@@ -1008,7 +1027,7 @@ body {
                 break;
 
             case 'activeAgent':
-                modelBtn.textContent = (msg.name || 'default') + ' ▾';
+                // Agent name shown in agent picker only; model button uses modelList
                 break;
         }
     });

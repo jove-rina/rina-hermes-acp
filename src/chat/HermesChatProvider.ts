@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AcpClient, AcpStatus } from '../acp/AcpClient';
+import { AcpClient, AcpStatus, ModelListState } from '../acp/AcpClient';
+import { buildFallbackModelListState } from '../acp/modelConfig';
 
 interface ChatMessage {
     role: string;
@@ -15,6 +16,8 @@ interface SessionInfo {
     createdAt: number;
     updatedAt: number;
     messageCount: number;
+    modelId?: string;
+    modelLabel?: string;
 }
 
 export class HermesChatProvider implements vscode.WebviewViewProvider {
@@ -31,6 +34,8 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _sessionId: string = '';
     private _sessions: SessionInfo[] = [];
     private _lastAssistantText: string = '';
+    private _modelState: ModelListState | null = null;
+    private _modelFallbackShown: boolean = false;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -116,6 +121,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'switchSession':
                     this._handleSwitchSession(message.sessionId);
+                    break;
+                case 'switchModel':
+                    this._handleSwitchModel(message.configId, message.valueId);
+                    break;
+                case 'getModels':
+                    this._postModelList();
                     break;
             }
         });
@@ -270,14 +281,19 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                     await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(content));
                 },
             },
-            (cmd: string, cwd: string) => {
+            (cmd: string, args: string[], cwd: string) => {
                 this._log(`Terminal: ${cmd.slice(0, 80)}`);
+                const fullCmd = args.length > 0 ? cmd + ' ' + args.join(' ') : cmd;
                 const terminal = vscode.window.createTerminal({
                     name: `Hermes: ${cmd.slice(0, 30)}`,
                     cwd,
                 });
-                terminal.sendText(cmd);
+                terminal.sendText(fullCmd);
                 terminal.show(false);
+            },
+            (models) => {
+                this._modelState = models ?? this._buildFallbackModelList();
+                this._postModelList();
             }
         );
         this._acp.onLog = (line: string) => {
@@ -285,8 +301,117 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         };
         try {
             await this._acp.start(cwd, configPath, configProfile);
+            this._applySessionModelPreference();
+            this._postModelList();
         } catch {
             this._acp = undefined;
+        }
+    }
+
+    private _buildFallbackModelList(): ModelListState | null {
+        const config = vscode.workspace.getConfiguration('hermes');
+        const models = config.get<Array<{ id: string; name: string }>>('models') || [];
+        const defaultModel = config.get<string>('defaultModel') || '';
+        const session = this._sessions.find(s => s.id === this._sessionId);
+        const currentId = session?.modelId || defaultModel;
+        return buildFallbackModelListState(models, currentId);
+    }
+
+    private _postModelList(): void {
+        const state = this._modelState ?? this._buildFallbackModelList();
+        if (state) {
+            this._postMessage({
+                type: 'modelList',
+                configId: state.configId,
+                currentValueId: state.currentValueId,
+                currentLabel: state.currentLabel,
+                models: state.models,
+                fromAgent: state.fromAgent,
+            });
+        } else {
+            this._postMessage({
+                type: 'modelList',
+                configId: '',
+                currentValueId: '',
+                currentLabel: 'default',
+                models: [],
+                fromAgent: false,
+            });
+        }
+    }
+
+    private _persistModelChoice(valueId: string, label: string): void {
+        const session = this._sessions.find(s => s.id === this._sessionId);
+        if (session) {
+            session.modelId = valueId;
+            session.modelLabel = label;
+            try {
+                fs.writeFileSync(this._sessionsPath, JSON.stringify(this._sessions.slice(0, 50), null, 2));
+            } catch { /* ignore */ }
+        }
+    }
+
+    private async _applySessionModelPreference(): Promise<void> {
+        const session = this._sessions.find(s => s.id === this._sessionId);
+        if (!session?.modelId || !this._acp) {
+            return;
+        }
+        const agentState = this._acp.getModelListState();
+        if (!agentState || agentState.configId === '__settings__') {
+            return;
+        }
+        if (session.modelId === agentState.currentValueId) {
+            return;
+        }
+        const known = agentState.models.some(m => m.valueId === session.modelId);
+        if (!known) {
+            return;
+        }
+        try {
+            await this._acp.setModel(agentState.configId, session.modelId);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this._log(`Restore model failed: ${msg}`);
+        }
+    }
+
+    private async _handleSwitchModel(configId: string, valueId: string): Promise<void> {
+        const state = this._modelState ?? this._buildFallbackModelList();
+        const picked = state?.models.find(m => m.valueId === valueId);
+        const label = picked?.name ?? valueId;
+        this._log(`Switch model: ${label}`);
+
+        if (!state?.fromAgent || configId === '__settings__') {
+            this._persistModelChoice(valueId, label);
+            if (state) {
+                this._modelState = { ...state, currentValueId: valueId, currentLabel: label };
+            }
+            this._postModelList();
+            if (!this._modelFallbackShown) {
+                this._modelFallbackShown = true;
+                vscode.window.showInformationMessage(
+                    'Model preference saved locally. Connect to Hermes with model config support to apply at runtime.'
+                );
+            }
+            return;
+        }
+
+        if (!this._acp) {
+            vscode.window.showWarningMessage('Hermes is not connected.');
+            return;
+        }
+        if (this._acp.status === 'prompting') {
+            vscode.window.showWarningMessage('Wait for the current response before changing model.');
+            return;
+        }
+
+        try {
+            await this._acp.setModel(configId, valueId);
+            this._persistModelChoice(valueId, label);
+            vscode.window.showInformationMessage(`Model switched to ${label}`);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            vscode.window.showErrorMessage(`Failed to switch model: ${msg}`);
         }
     }
 
@@ -342,9 +467,11 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
         if (this._acp) {
             await this._acp.newSession(cwd);
+            await this._applySessionModelPreference();
         } else {
             await this._connect();
         }
+        this._postModelList();
         this._postMessage({ type: 'newChat' });
         this._postMessage({ type: 'sessionList', sessions: this._sessions });
     }
@@ -355,10 +482,10 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._sessionId = sessionId;
         this._sessionMessages = [];
         this._loadHistory();
-        // Note: This loads local history only. The ACP session is new (no agent memory).
-        // Full session restoration requires Hermes to support session/load.
         const cwd = this._resolveCwd();
         await this._acp?.newSession(cwd);
+        await this._applySessionModelPreference();
+        this._postModelList();
         this._postMessage({ type: 'newChat' });
         this._postMessage({ type: 'sessionList', sessions: this._sessions });
         this._restoreMessages();
@@ -398,10 +525,10 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._handleNewChat();
     }
 
-    public sendText(text: string): void {
+    public async sendText(text: string): Promise<void> {
         if (!this._acp) {
-            vscode.window.showWarningMessage('Hermes is not connected. Opening chat...');
-            this._connect();
+            vscode.window.showWarningMessage('Hermes is not connected. Connecting...');
+            await this._connect();
         }
         this._postMessage({ type: 'addMessage', role: 'user', text });
         this._saveMessage('user', text);

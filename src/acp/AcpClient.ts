@@ -13,8 +13,14 @@ import type {
     ClientConnection
 } from '@agentclientprotocol/sdk';
 import { PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
+import {
+    buildModelListState,
+    type ModelListState
+} from './modelConfig';
 
 export type AcpStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'error';
+export type { ModelListState } from './modelConfig';
+export type ModelsChangedHandler = (models: ModelListState | null) => void;
 
 export type MessageHandler = (role: 'user' | 'assistant' | 'tool' | 'thought', text: string, toolCallId?: string) => void;
 export type StatusHandler = (status: AcpStatus, message?: string) => void;
@@ -24,7 +30,7 @@ export type FileSystemHandler = {
     readTextFile: (path: string) => Promise<string>;
     writeTextFile: (path: string, content: string) => Promise<void>;
 };
-export type TerminalHandler = (command: string, cwd: string) => void;
+export type TerminalHandler = (command: string, args: string[], cwd: string) => void;
 export type LogHandler = (text: string) => void;
 
 interface TerminalInstance {
@@ -54,6 +60,8 @@ export class AcpClient {
     private _nextTerminalId: number = 1;
     private _responseBuffer: string = '';
     private _thoughtBuffer: string = '';
+    private _configOptions: unknown[] = [];
+    private _onModelsChanged: ModelsChangedHandler;
 
     private static readonly VALID: Record<AcpStatus, AcpStatus[]> = {
         idle:        ['connecting'],
@@ -73,7 +81,8 @@ export class AcpClient {
         onPermission?: PermissionHandler,
         onConnectionLost?: ConnectionLostHandler,
         onFileSystem?: FileSystemHandler,
-        onTerminal?: TerminalHandler
+        onTerminal?: TerminalHandler,
+        onModelsChanged?: ModelsChangedHandler
     ) {
         this._onMessage = onMessage;
         this._onStatus = onStatus;
@@ -82,9 +91,14 @@ export class AcpClient {
         this._onFileSystem = onFileSystem || { readTextFile: async () => '', writeTextFile: async () => {} };
         this._onTerminal = onTerminal || (() => {});
         this._onLog = () => {};
+        this._onModelsChanged = onModelsChanged || (() => {});
     }
 
     set onLog(handler: LogHandler) { this._onLog = handler; }
+
+    getModelListState(): ModelListState | null {
+        return buildModelListState(this._configOptions);
+    }
 
     get status(): AcpStatus {
         return this._status;
@@ -242,6 +256,7 @@ export class AcpClient {
 
             const builder = ctx.buildSession(cwd);
             this._session = await builder.start();
+            this._syncConfigOptions(this._session.newSessionResponse.configOptions);
             this._transitionTo('ready', `Session: ${this._session.sessionId}`);
 
         } catch (err) {
@@ -286,6 +301,26 @@ export class AcpClient {
         }
     }
 
+    async setModel(configId: string, valueId: string): Promise<void> {
+        if (!this._session || !this._conn) {
+            throw new Error('Not connected');
+        }
+        if (this._status === 'prompting') {
+            throw new Error('Cannot change model while Hermes is responding');
+        }
+
+        const response = await this._conn.agent.request(methods.agent.session.setConfigOption, {
+            sessionId: this._session.sessionId,
+            configId,
+            value: valueId,
+        } as any);
+
+        const updated = (response as { configOptions?: unknown[] } | void)?.configOptions;
+        if (updated) {
+            this._syncConfigOptions(updated);
+        }
+    }
+
     async newSession(cwd: string): Promise<void> {
         if (!this._conn) {
             await this.start(cwd);
@@ -297,6 +332,7 @@ export class AcpClient {
             this._thoughtBuffer = '';
             const builder = this._conn.agent.buildSession(cwd);
             this._session = await builder.start();
+            this._syncConfigOptions(this._session.newSessionResponse.configOptions);
             this._transitionTo('ready');
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -339,7 +375,7 @@ export class AcpClient {
         const cwd = params.cwd || process.cwd();
         const env = params.env ? { ...process.env, ...params.env } : process.env;
 
-        this._onTerminal(cmd, cwd); // mirror to VS Code terminal
+        this._onTerminal(cmd, args, cwd); // mirror to VS Code terminal
 
         let resolveExit: () => void = () => {};
         const exited = new Promise<void>((r) => { resolveExit = r; });
@@ -447,7 +483,20 @@ export class AcpClient {
             case 'tool_call_update':
                 this._onMessage('tool', `⚙️ ${update.title ?? 'Tool running'}`, update.toolCallId);
                 break;
+
+            case 'config_option_update': {
+                const configOptions = update.configOptions ?? notification.configOptions;
+                if (configOptions) {
+                    this._syncConfigOptions(configOptions);
+                }
+                break;
+            }
         }
+    }
+
+    private _syncConfigOptions(configOptions: unknown): void {
+        this._configOptions = Array.isArray(configOptions) ? configOptions : [];
+        this._onModelsChanged(buildModelListState(this._configOptions));
     }
 
     private async _findHermes(): Promise<string> {

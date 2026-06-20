@@ -85,6 +85,25 @@
           "default": false,
           "description": "Show tool call notifications in the chat."
         },
+        "hermes.models": {
+          "type": "array",
+          "default": [],
+          "description": "Fallback model list when Hermes does not expose ACP session config options.",
+          "markdownDescription": "Used when the agent does not return `configOptions` with a model selector. Example:\n```json\n[\n  { \"id\": \"claude-sonnet\", \"name\": \"Claude Sonnet\" },\n  { \"id\": \"gpt-4o\", \"name\": \"GPT-4o\" }\n]\n```",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" }
+            },
+            "required": ["id", "name"]
+          }
+        },
+        "hermes.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model id from hermes.models (fallback list only)."
+        },
         "hermes.agents": {
           "type": "array",
           "default": [],
