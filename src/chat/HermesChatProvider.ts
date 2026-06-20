@@ -46,6 +46,9 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                 case 'cancel':
                     this._acp?.cancel();
                     break;
+                case 'insertCode':
+                    this._handleInsertCode(message.text);
+                    break;
                 case 'newChat':
                     this._handleNewChat();
                     break;
@@ -159,6 +162,18 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _handleUserMessage(text: string): void {
         this._log(`User message: ${text.slice(0, 80)}`);
         this._acp?.sendMessage(text);
+    }
+
+    private _handleInsertCode(text: string): void {
+        this._log(`Insert code (${text.length} chars)`);
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showInformationMessage('No active editor to insert code into.');
+            return;
+        }
+        editor.edit((editBuilder) => {
+            editBuilder.insert(editor.selection.active, text);
+        });
     }
 
     private async _handleNewChat(): Promise<void> {

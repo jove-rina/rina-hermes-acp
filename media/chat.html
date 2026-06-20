@@ -369,18 +369,34 @@ body {
             const el = document.getElementById(streamingMessageId);
             if (el) {
                 el.classList.remove('streaming');
-                // Re-render as markdown now that streaming is complete
                 const text = el.querySelector('.content').textContent;
                 el.querySelector('.content').innerHTML = marked.parse(text);
-                // Highlight code blocks
                 el.querySelectorAll('pre code').forEach((block) => {
                     hljs.highlightElement(block);
+                    addInsertButton(block);
                 });
             }
             streamingMessageId = null;
         }
         thoughtMsgId = null;
         cancelBtn.style.display = 'none';
+    }
+
+    function addInsertButton(codeBlock) {
+        const pre = codeBlock.closest('pre');
+        if (!pre || pre.querySelector('.code-actions')) return;
+        const lang = (codeBlock.className.match(/language-(\w+)/) || [])[1] || '';
+        const actions = document.createElement('div');
+        actions.className = 'code-actions';
+        const btn = document.createElement('button');
+        btn.textContent = 'Insert' + (lang ? ' (' + lang + ')' : '');
+        btn.title = 'Insert code into editor';
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            vscode.postMessage({ type: 'insertCode', text: codeBlock.textContent, language: lang });
+        });
+        actions.appendChild(btn);
+        pre.parentNode.insertBefore(actions, pre.nextSibling);
     }
 
     function newChat() {
@@ -462,7 +478,10 @@ body {
                     document.querySelectorAll('.message.assistant .content').forEach((el) => {
                         const text = el.textContent || '';
                         el.innerHTML = marked.parse(text);
-                        el.querySelectorAll('pre code').forEach((b) => hljs.highlightElement(b));
+                        el.querySelectorAll('pre code').forEach((b) => {
+                            hljs.highlightElement(b);
+                            addInsertButton(b);
+                        });
                     });
                 } else if (msg.status === 'prompting') {
                     cancelBtn.style.display = '';
