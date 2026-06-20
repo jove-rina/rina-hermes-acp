@@ -1,29 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- Background circle -->
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6c63ff"/>
-      <stop offset="100%" style="stop-color:#e040fb"/>
-    </linearGradient>
-  </defs>
-  <rect width="256" height="256" rx="48" fill="url(#bg)"/>
+  <!-- Background -->
+  <rect width="256" height="256" rx="40" fill="#7c3aed"/>
 
   <!-- Chat bubble -->
-  <rect x="48" y="72" width="160" height="104" rx="16" fill="white" opacity="0.95"/>
-  
-  <!-- Wing (Hermes symbol) - left -->
-  <path d="M40 80 C60 60 90 55 120 70 C100 72 80 78 70 90 Z" fill="white" opacity="0.9"/>
-  <path d="M35 70 C55 45 95 40 130 55 C105 58 80 68 65 82 Z" fill="white" opacity="0.8"/>
-  <path d="M30 60 C50 30 100 25 140 40 C110 44 80 56 60 72 Z" fill="white" opacity="0.7"/>
+  <rect x="48" y="64" width="160" height="112" rx="16" fill="#fff" opacity="0.95"/>
+  <polygon points="80,176 96,156 48,176" fill="#fff" opacity="0.95"/>
 
-  <!-- Wing (Hermes symbol) - right -->
-  <path d="M216 80 C196 60 166 55 136 70 C156 72 176 78 186 90 Z" fill="white" opacity="0.9"/>
-  <path d="M221 70 C201 45 161 40 126 55 C151 58 176 68 191 82 Z" fill="white" opacity="0.8"/>
-  <path d="M226 60 C206 30 156 25 116 40 C146 44 176 56 196 72 Z" fill="white" opacity="0.7"/>
+  <!-- Wing symbol (minimal) -->
+  <path d="M72 100 Q96 88 128 96" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M76 96 Q104 80 136 90" stroke="#7c3aed" stroke-width="2.5" fill="none" stroke-linecap="round"/>
 
-  <!-- Code brackets -->
-  <text x="52" y="150" font-family="monospace" font-size="48" font-weight="bold" fill="#6c63ff">&lt;/&gt;</text>
-
-  <!-- Sparkle -->
-  <text x="150" y="95" font-size="28" fill="#e040fb">✦</text>
+  <!-- AI cursor -->
+  <rect x="104" y="124" width="48" height="3" rx="1.5" fill="#7c3aed" opacity="0.6"/>
 </svg>
