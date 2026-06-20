@@ -25,6 +25,16 @@ export type FileSystemHandler = {
     writeTextFile: (path: string, content: string) => Promise<void>;
 };
 
+interface TerminalInstance {
+    process: ChildProcess;
+    stdout: string;
+    stderr: string;
+    exitCode: number | null;
+    exitSignal: string | null;
+    exited: Promise<void>;
+    resolveExit: () => void;
+}
+
 export class AcpClient {
     private _process: ChildProcess | null = null;
     private _app: ReturnType<typeof client> | null = null;
@@ -36,6 +46,8 @@ export class AcpClient {
     private _onPermission: PermissionHandler;
     private _onConnectionLost: ConnectionLostHandler;
     private _onFileSystem: FileSystemHandler;
+    private _terminals: Map<string, TerminalInstance> = new Map();
+    private _nextTerminalId: number = 1;
     private _responseBuffer: string = '';
     private _thoughtBuffer: string = '';
 
@@ -159,6 +171,23 @@ export class AcpClient {
                 await this._onFileSystem.writeTextFile(params.path, params.content);
             });
 
+            // Register terminal capability handlers
+            this._app.onRequest(methods.client.terminal.create as any, async ({ params }: any) => {
+                return this._handleTerminalCreate(params);
+            });
+            this._app.onRequest(methods.client.terminal.output as any, async ({ params }: any) => {
+                return this._handleTerminalOutput(params);
+            });
+            this._app.onRequest(methods.client.terminal.waitForExit as any, async ({ params }: any) => {
+                return this._handleTerminalWaitForExit(params);
+            });
+            this._app.onRequest(methods.client.terminal.release as any, async ({ params }: any) => {
+                return this._handleTerminalRelease(params);
+            });
+            this._app.onRequest(methods.client.terminal.kill as any, async ({ params }: any) => {
+                return this._handleTerminalKill(params);
+            });
+
             this._conn = this._app.connect(stream);
             const ctx = this._conn.agent;
 
@@ -168,7 +197,7 @@ export class AcpClient {
                 clientCapabilities: {
                     session: { update: true },
                     fs: { readTextFile: true, writeTextFile: true },
-                    terminal: false
+                    terminal: true
                 }
             } as any);
 
@@ -256,6 +285,76 @@ export class AcpClient {
     dispose(): void {
         this.stop();
     }
+
+    // ---- Terminal handlers ----
+
+    private _handleTerminalCreate(params: any): any {
+        const id = `term_${this._nextTerminalId++}`;
+        const cmd = params.command;
+        const cwd = params.cwd || process.cwd();
+
+        let stdout = '';
+        let stderr = '';
+        let resolveExit: () => void = () => {};
+        const exited = new Promise<void>((r) => { resolveExit = r; });
+
+        const proc = spawn(cmd, [], {
+            cwd,
+            shell: true,
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        proc.stdout?.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+        });
+        proc.stderr?.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+        });
+        proc.on('exit', (code, sig) => {
+            term.exitCode = code;
+            term.exitSignal = sig === null ? null : sig;
+            resolveExit();
+        });
+
+        const term: TerminalInstance = { process: proc, stdout, stderr, exitCode: null, exitSignal: null, exited, resolveExit };
+        this._terminals.set(id, term);
+        return { terminalId: id };
+    }
+
+    private _handleTerminalOutput(params: any): any {
+        const term = this._terminals.get(params.terminalId);
+        if (!term) return { output: '', exitCode: null, exitSignal: null };
+        return {
+            output: term.stdout,
+            errorOutput: term.stderr,
+            exitCode: term.exitCode,
+            exitSignal: term.exitSignal,
+        };
+    }
+
+    private async _handleTerminalWaitForExit(params: any): Promise<any> {
+        const term = this._terminals.get(params.terminalId);
+        if (!term) return { exitCode: null, exitSignal: null };
+        await term.exited;
+        return { exitCode: term.exitCode, exitSignal: term.exitSignal };
+    }
+
+    private _handleTerminalRelease(params: any): any {
+        const term = this._terminals.get(params.terminalId);
+        if (term) {
+            term.process.kill();
+            this._terminals.delete(params.terminalId);
+        }
+    }
+
+    private _handleTerminalKill(params: any): any {
+        const term = this._terminals.get(params.terminalId);
+        if (term) {
+            term.process.kill();
+        }
+    }
+
+    // ---- ACP session update handler ----
 
     private _handleSessionUpdate(notification: any): void {
         const update = notification.update;
