@@ -466,6 +466,7 @@ body {
     let streamingMessageId = null;
     let thoughtMsgId = null;
     let canSend = false;
+    let toolCallMap = {};
     const cancelBtn = document.getElementById('cancelBtn');
 
     function updateStatus(status, message) {
@@ -629,6 +630,7 @@ body {
         placeholder = document.getElementById('placeholder');
         streamingMessageId = null;
         thoughtMsgId = null;
+        toolCallMap = {};
         cancelBtn.style.display = 'none';
     }
 
@@ -754,6 +756,22 @@ body {
             case 'addMessage':
                 if (msg.role === 'assistant') {
                     addMessage('assistant', msg.text);
+                } else if (msg.role === 'tool' && msg.toolCallId) {
+                    // Merge tool_call_update into existing bubble
+                    if (toolCallMap[msg.toolCallId]) {
+                        const el = document.getElementById(toolCallMap[msg.toolCallId]);
+                        if (el) {
+                            el.querySelector('.tool-body').textContent = msg.text;
+                            const summary = el.querySelector('.tool-header span:last-child');
+                            if (summary) {
+                                const firstLine = msg.text.split('\n')[0] || msg.text;
+                                summary.textContent = firstLine.length > 60 ? firstLine.slice(0, 60) + '…' : firstLine;
+                            }
+                            break;
+                        }
+                    }
+                    const id = addMessage('tool', msg.text);
+                    if (msg.toolCallId) toolCallMap[msg.toolCallId] = id;
                 } else if (msg.role === 'thought') {
                     // Update the last thought bubble instead of creating a new one
                     if (thoughtMsgId) {

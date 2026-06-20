@@ -16,7 +16,7 @@ import { PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
 
 export type AcpStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'error';
 
-export type MessageHandler = (role: 'user' | 'assistant' | 'tool' | 'thought', text: string) => void;
+export type MessageHandler = (role: 'user' | 'assistant' | 'tool' | 'thought', text: string, toolCallId?: string) => void;
 export type StatusHandler = (status: AcpStatus, message?: string) => void;
 export type PermissionHandler = (prompt: string) => Promise<boolean>;
 export type ConnectionLostHandler = () => void;
@@ -436,11 +436,11 @@ export class AcpClient {
             }
 
             case 'tool_call':
-                this._onMessage('tool', `🔧 ${update.title}`);
+                this._onMessage('tool', `🔧 ${update.title}`, update.toolCallId);
                 break;
 
             case 'tool_call_update':
-                this._onMessage('tool', `⚙️ ${update.title ?? 'Tool running'}`);
+                this._onMessage('tool', `⚙️ ${update.title ?? 'Tool running'}`, update.toolCallId);
                 break;
         }
     }
@@ -453,6 +453,8 @@ export class AcpClient {
             '/opt/homebrew/bin/hermes',
         ];
 
+        const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+
         for (const cmd of candidates) {
             try {
                 if (path.isAbsolute(cmd)) {
@@ -460,7 +462,7 @@ export class AcpClient {
                     return cmd;
                 }
                 const found = await new Promise<boolean>((resolve) => {
-                    const proc = spawn('which', [cmd], { stdio: 'ignore' });
+                    const proc = spawn(whichCmd, [cmd], { stdio: 'ignore' });
                     proc.on('exit', (code) => resolve(code === 0));
                     proc.on('error', () => resolve(false));
                 });
@@ -479,7 +481,6 @@ export class AcpClient {
     private _transitionTo(status: AcpStatus, message?: string): boolean {
         const allowed = AcpClient.VALID[this._status];
         if (!allowed || !allowed.includes(status)) {
-            console.log(`[hermes] state transition ${this._status} → ${status} not allowed, ignored`);
             return false;
         }
         this._status = status;

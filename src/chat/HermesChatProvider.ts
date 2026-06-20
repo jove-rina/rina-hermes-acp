@@ -18,17 +18,19 @@ interface SessionInfo {
 }
 
 export class HermesChatProvider implements vscode.WebviewViewProvider {
+    // ---- Lifecycle ----
     private _view?: vscode.WebviewView;
     private _acp?: AcpClient;
     private _output: vscode.OutputChannel;
+
+    // ---- Session State ----
     private _historyDir: string;
     private _sessionsPath: string;
+    private _activeIdPath: string;
     private _sessionMessages: ChatMessage[] = [];
     private _sessionId: string = '';
     private _sessions: SessionInfo[] = [];
     private _lastAssistantText: string = '';
-
-    private _activeIdPath: string;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -211,8 +213,8 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         const cwd = this._resolveCwd(configCwd);
 
         this._acp = new AcpClient(
-            (role, text) => {
-                this._postMessage({ type: 'addMessage', role, text });
+            (role, text, toolCallId) => {
+                this._postMessage({ type: 'addMessage', role, text, toolCallId });
                 if (role === 'user') {
                     this._saveMessage('user', text);
                 }
@@ -347,7 +349,8 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._sessionId = sessionId;
         this._sessionMessages = [];
         this._loadHistory();
-        // Start a new ACP session; note: agent context won't match history
+        // Note: This loads local history only. The ACP session is new (no agent memory).
+        // Full session restoration requires Hermes to support session/load.
         const cwd = this._resolveCwd();
         await this._acp?.newSession(cwd);
         this._postMessage({ type: 'newChat' });

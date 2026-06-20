@@ -78,7 +78,8 @@
         "hermes.agents": {
           "type": "array",
           "default": [],
-          "description": "List of named agent configurations for quick switching.",
+          "description": "List of named agent configurations for quick switching via the chat UI.",
+          "markdownDescription": "List of named agent configurations for quick switching. Each agent can have a different `path`, `profile`, and `cwd`. Example:\n```json\n[\n  { \"name\": \"Default\", \"profile\": \"\" },\n  { \"name\": \"Fast\", \"path\": \"/path/to/hermes\", \"profile\": \"fast\" }\n]\n```",
           "items": {
             "type": "object",
             "properties": {
