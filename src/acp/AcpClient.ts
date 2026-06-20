@@ -138,7 +138,17 @@ export class AcpClient {
 
             this._process.on('exit', (code, signal) => {
                 if (this._status !== 'idle') {
-                    this.stop();
+                    // Manual cleanup: don't call stop() which would override error status
+                    this._session?.dispose();
+                    this._session = null;
+                    this._conn = null;
+                    this._app = null;
+                    this._process = null;
+                    // Kill terminal children
+                    for (const [, t] of this._terminals) {
+                        try { t.process.kill(); } catch { /* ignore */ }
+                    }
+                    this._terminals.clear();
                     this._transitionTo('error', `Process exited (code: ${code}, signal: ${signal})`);
                     this._onConnectionLost();
                 }
@@ -208,12 +218,10 @@ export class AcpClient {
 
             await ctx.request(methods.agent.initialize, {
                 protocolVersion: PROTOCOL_VERSION,
-                capabilities: {},
                 clientCapabilities: {
-                    session: { update: true },
                     fs: { readTextFile: true, writeTextFile: true },
                     terminal: true
-                }
+                } as any
             } as any);
 
             const builder = ctx.buildSession(cwd);
@@ -231,7 +239,6 @@ export class AcpClient {
     async sendMessage(text: string): Promise<void> {
         if (this._status !== 'ready') {
             this._onMessage('assistant', 'Please wait for connection...');
-            this._transitionTo('ready');
             return;
         }
 
@@ -315,8 +322,6 @@ export class AcpClient {
 
         this._onTerminal(cmd, cwd); // mirror to VS Code terminal
 
-        let stdout = '';
-        let stderr = '';
         let resolveExit: () => void = () => {};
         const exited = new Promise<void>((r) => { resolveExit = r; });
 
@@ -326,11 +331,21 @@ export class AcpClient {
             stdio: ['pipe', 'pipe', 'pipe'],
         });
 
+        const term: TerminalInstance = {
+            process: proc,
+            stdout: '',
+            stderr: '',
+            exitCode: null,
+            exitSignal: null,
+            exited,
+            resolveExit,
+        };
+
         proc.stdout?.on('data', (chunk: Buffer) => {
-            stdout += chunk.toString();
+            term.stdout += chunk.toString();
         });
         proc.stderr?.on('data', (chunk: Buffer) => {
-            stderr += chunk.toString();
+            term.stderr += chunk.toString();
         });
         proc.on('exit', (code, sig) => {
             term.exitCode = code;
@@ -338,19 +353,17 @@ export class AcpClient {
             resolveExit();
         });
 
-        const term: TerminalInstance = { process: proc, stdout, stderr, exitCode: null, exitSignal: null, exited, resolveExit };
         this._terminals.set(id, term);
         return { terminalId: id };
     }
 
     private _handleTerminalOutput(params: any): any {
         const term = this._terminals.get(params.terminalId);
-        if (!term) return { output: '', exitCode: null, exitSignal: null };
+        if (!term) return { output: '', truncated: false, exitStatus: {} };
         return {
             output: term.stdout,
-            errorOutput: term.stderr,
-            exitCode: term.exitCode,
-            exitSignal: term.exitSignal,
+            truncated: false,
+            exitStatus: term.exitCode !== null ? { exitCode: term.exitCode } : undefined,
         };
     }
 

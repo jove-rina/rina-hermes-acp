@@ -26,13 +26,17 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _sessionMessages: ChatMessage[] = [];
     private _sessionId: string = '';
     private _sessions: SessionInfo[] = [];
+    private _lastAssistantText: string = '';
 
     constructor(
-        private readonly _extensionUri: vscode.Uri
+        private readonly _extensionUri: vscode.Uri,
+        context: vscode.ExtensionContext
     ) {
         this._output = vscode.window.createOutputChannel('Hermes Chat', 'hermes-chat');
-        this._historyPath = path.join(_extensionUri.fsPath, '.chat-history.json');
-        this._sessionsPath = path.join(_extensionUri.fsPath, '.sessions.json');
+        const storagePath = context.globalStorageUri.fsPath;
+        fs.mkdirSync(storagePath, { recursive: true });
+        this._historyPath = path.join(storagePath, 'chat-history.json');
+        this._sessionsPath = path.join(storagePath, 'sessions.json');
         this._sessionId = Date.now().toString(36);
         this._loadSessions();
         this._loadHistory();
@@ -167,7 +171,6 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         let configCwd = config.get<string>('cwd') || undefined;
         let configProfile = config.get<string>('profile') || undefined;
 
-        // If a named agent was requested, look it up
         if (agentName) {
             const agents = config.get<any[]>('agents') || [];
             const agent = agents.find(a => a.name === agentName);
@@ -183,13 +186,21 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._acp = new AcpClient(
             (role, text) => {
                 this._postMessage({ type: 'addMessage', role, text });
-                if (role === 'user' || role === 'assistant') {
-                    this._saveMessage(role, text);
+                if (role === 'user') {
+                    this._saveMessage('user', text);
+                }
+                if (role === 'assistant') {
+                    this._lastAssistantText = text;
                 }
             },
             (status, msg) => {
                 this._log(`Status: ${status}${msg ? ' — ' + msg : ''}`);
                 this._postMessage({ type: 'status', status, message: msg });
+                // Save assistant message once when streaming completes
+                if (status === 'ready' && this._lastAssistantText) {
+                    this._saveMessage('assistant', this._lastAssistantText);
+                    this._lastAssistantText = '';
+                }
             },
             async (prompt) => {
                 this._log(`Permission requested: ${prompt.slice(0, 80)}`);
@@ -231,13 +242,13 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         try {
             await this._acp.start(cwd, configPath, configProfile);
         } catch {
-            // start() already set error status and cleaned up — just null the ref
             this._acp = undefined;
         }
     }
 
     private _handleUserMessage(text: string): void {
         this._log(`User message: ${text.slice(0, 80)}`);
+        this._saveMessage('user', text);
         this._acp?.sendMessage(text);
     }
 
@@ -256,7 +267,6 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private async _handleOpenFile(filePath: string): Promise<void> {
         this._log(`Open file: ${filePath}`);
         try {
-            // Try workspace root-relative first, then absolute
             let uri: vscode.Uri;
             if (path.isAbsolute(filePath)) {
                 uri = vscode.Uri.file(filePath);
@@ -346,7 +356,19 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
     private _getHtml(): string {
         const htmlPath = path.join(this._extensionUri.fsPath, 'media', 'chat.html');
-        return fs.readFileSync(htmlPath, 'utf-8');
+        let html = fs.readFileSync(htmlPath, 'utf-8');
+
+        if (this._view) {
+            const webview = this._view.webview;
+            const vendorUri = (file: string) =>
+                webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'vendor', file)).toString();
+            html = html
+                .replace('{{MARKED_URI}}', vendorUri('marked.min.js'))
+                .replace('{{HIGHLIGHT_URI}}', vendorUri('highlight.min.js'))
+                .replace('{{HIGHLIGHT_CSS_URI}}', vendorUri('github-dark.min.css'));
+        }
+
+        return html;
     }
 
     private _resolveCwd(configCwd?: string): string {

@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="{{HIGHLIGHT_CSS_URI}}">
+<script src="{{MARKED_URI}}"></script>
+<script src="{{HIGHLIGHT_URI}}"></script>
 <style>
 :root {
     --bg: var(--vscode-sideBar-background, #1e1e1e);
@@ -437,7 +437,7 @@ body {
     <button id="newChatBtn" title="New Chat">+ New</button>
 </div>
 <div id="status-bar">
-    <span class="dot disconnected" id="statusDot"></span>
+    <span class="dot idle" id="statusDot"></span>
     <span id="statusText">Disconnected</span>
 </div>
 <div id="messages">

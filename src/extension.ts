@@ -7,7 +7,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('Hermes Agent Chat activating...');
 
     // Register the chat webview provider
-    chatProvider = new HermesChatProvider(context.extensionUri);
+    chatProvider = new HermesChatProvider(context.extensionUri, context);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('hermesChat', chatProvider, {
             webviewOptions: { retainContextWhenHidden: true }
