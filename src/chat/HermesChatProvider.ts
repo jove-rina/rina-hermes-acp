@@ -49,6 +49,9 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                 case 'insertCode':
                     this._handleInsertCode(message.text);
                     break;
+                case 'openFile':
+                    this._handleOpenFile(message.path);
+                    break;
                 case 'newChat':
                     this._handleNewChat();
                     break;
@@ -174,6 +177,28 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         editor.edit((editBuilder) => {
             editBuilder.insert(editor.selection.active, text);
         });
+    }
+
+    private async _handleOpenFile(filePath: string): Promise<void> {
+        this._log(`Open file: ${filePath}`);
+        try {
+            // Try workspace root-relative first, then absolute
+            let uri: vscode.Uri;
+            if (path.isAbsolute(filePath)) {
+                uri = vscode.Uri.file(filePath);
+            } else {
+                const folders = vscode.workspace.workspaceFolders;
+                if (folders && folders.length > 0) {
+                    uri = vscode.Uri.joinPath(folders[0].uri, filePath);
+                } else {
+                    uri = vscode.Uri.file(filePath);
+                }
+            }
+            const doc = await vscode.workspace.openTextDocument(uri);
+            await vscode.window.showTextDocument(doc);
+        } catch {
+            vscode.window.showWarningMessage(`Could not open file: ${filePath}`);
+        }
     }
 
     private async _handleNewChat(): Promise<void> {

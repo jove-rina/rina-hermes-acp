@@ -175,6 +175,18 @@ body {
 }
 .message th { background: var(--text-block); }
 
+/* File reference links */
+.message .file-ref {
+    color: var(--primary);
+    text-decoration: underline;
+    cursor: pointer;
+    border-bottom: 1px dashed var(--primary);
+    padding: 0 1px;
+}
+.message .file-ref:hover {
+    opacity: 0.8;
+}
+
 /* Insert button on code blocks */
 .message .code-actions {
     display: flex;
@@ -375,6 +387,7 @@ body {
                     hljs.highlightElement(block);
                     addInsertButton(block);
                 });
+                processFileRefs(el.querySelector('.content'));
             }
             streamingMessageId = null;
         }
@@ -397,6 +410,49 @@ body {
         });
         actions.appendChild(btn);
         pre.parentNode.insertBefore(actions, pre.nextSibling);
+    }
+
+    function processFileRefs(container) {
+        if (!container) return;
+        // Walk text nodes and replace @file patterns with clickable links
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+        const nodesToReplace = [];
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const text = node.textContent || '';
+            const refRegex = /@([\w./\\-]+(?:\.[a-zA-Z]+)?)/g;
+            let match;
+            let lastIdx = 0;
+            const parts = [];
+            while ((match = refRegex.exec(text)) !== null) {
+                const before = text.slice(lastIdx, match.index);
+                if (before) parts.push(document.createTextNode(before));
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'file-ref';
+                link.textContent = match[0];
+                link.title = `Open ${match[1]}`;
+                const filePath = match[1];
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({ type: 'openFile', path: filePath });
+                });
+                parts.push(link);
+                lastIdx = match.index + match[0].length;
+            }
+            if (parts.length > 0) {
+                const remaining = text.slice(lastIdx);
+                if (remaining) parts.push(document.createTextNode(remaining));
+                nodesToReplace.push({ node, parts });
+            }
+        }
+        for (const { node, parts } of nodesToReplace) {
+            const parent = node.parentNode;
+            if (!parent) continue;
+            const fragment = document.createDocumentFragment();
+            parts.forEach(p => fragment.appendChild(p));
+            parent.replaceChild(fragment, node);
+        }
     }
 
     function newChat() {
@@ -482,6 +538,7 @@ body {
                             hljs.highlightElement(b);
                             addInsertButton(b);
                         });
+                        processFileRefs(el);
                     });
                 } else if (msg.status === 'prompting') {
                     cancelBtn.style.display = '';
