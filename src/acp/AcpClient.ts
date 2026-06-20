@@ -12,6 +12,7 @@ import {
 import type {
     ClientConnection
 } from '@agentclientprotocol/sdk';
+import { PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
 
 export type AcpStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -53,7 +54,7 @@ export class AcpClient {
         return this._status;
     }
 
-    async start(cwd: string = process.cwd()): Promise<void> {
+    async start(cwd: string = process.cwd(), hermesPath?: string): Promise<void> {
         if (this._status === 'connected' || this._status === 'connecting') {
             return;
         }
@@ -61,9 +62,10 @@ export class AcpClient {
         this._setStatus('connecting', 'Starting Hermes ACP...');
 
         try {
-            const hermesPath = await this._findHermes();
+            const resolvedPath = hermesPath || await this._findHermes();
+            if (!resolvedPath) throw new Error('Hermes executable not found');
 
-            this._process = spawn(hermesPath, ['acp'], {
+            this._process = spawn(resolvedPath, ['acp'], {
                 cwd,
                 stdio: ['pipe', 'pipe', 'pipe'],
                 env: { ...process.env }
@@ -143,6 +145,18 @@ export class AcpClient {
             // connect() keeps the connection alive (unlike connectWith)
             this._conn = this._app.connect(stream);
             const ctx = this._conn.agent;
+
+            // Explicit initialize with client capabilities
+            await ctx.request(methods.agent.initialize, {
+                protocolVersion: PROTOCOL_VERSION,
+                capabilities: {},
+                clientCapabilities: {
+                    session: { update: true },
+                    fs: { readTextFile: false, writeTextFile: false },
+                    terminal: false
+                }
+            } as any);
+
             const builder = ctx.buildSession(cwd);
             this._session = await builder.start();
             this._setStatus('connected', `Session: ${this._session.sessionId}`);
@@ -185,6 +199,23 @@ export class AcpClient {
             this._onStreamEnd();
         } catch {
             // cancel is best-effort
+        }
+    }
+
+    async newSession(cwd: string): Promise<void> {
+        if (!this._conn) {
+            await this.start(cwd);
+            return;
+        }
+        try {
+            this._session?.dispose();
+            this._responseBuffer = '';
+            this._thoughtBuffer = '';
+            const builder = this._conn.agent.buildSession(cwd);
+            this._session = await builder.start();
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this._setStatus('error', `New session failed: ${msg}`);
         }
     }
 

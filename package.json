@@ -44,7 +44,22 @@
         "command": "hermes.openChat",
         "title": "Hermes: Open Chat"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Hermes Agent Chat",
+      "properties": {
+        "hermes.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Hermes executable. Leave empty to auto-detect."
+        },
+        "hermes.cwd": {
+          "type": "string",
+          "default": "",
+          "description": "Working directory for Hermes sessions. Defaults to workspace root."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

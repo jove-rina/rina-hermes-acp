@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AcpClient, AcpStatus } from '../acp/AcpClient';
 
 export class HermesChatProvider implements vscode.WebviewViewProvider {
@@ -51,8 +53,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private async _connect(): Promise<void> {
         if (this._acp) return;
 
+        const config = vscode.workspace.getConfiguration('hermes');
+        const configPath = config.get<string>('path') || undefined;
+        const configCwd = config.get<string>('cwd') || undefined;
+
         const workspaceFolders = vscode.workspace.workspaceFolders;
-        const cwd = workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        const cwd = configCwd || workspaceFolders?.[0]?.uri.fsPath || process.cwd();
 
         this._acp = new AcpClient(
             (role, text) => this._postMessage({ type: 'addMessage', role, text }),
@@ -71,7 +77,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         );
 
         try {
-            await this._acp.start(cwd);
+            await this._acp.start(cwd, configPath);
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             this._postMessage({ type: 'status', status: 'error', message: msg });
@@ -85,10 +91,17 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     }
 
     private async _handleNewChat(): Promise<void> {
-        this._acp?.dispose();
-        this._acp = undefined;
+        const config = vscode.workspace.getConfiguration('hermes');
+        const configCwd = config.get<string>('cwd') || undefined;
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const cwd = configCwd || workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+
+        if (this._acp) {
+            await this._acp.newSession(cwd);
+        } else {
+            await this._connect();
+        }
         this._postMessage({ type: 'newChat' });
-        await this._connect();
     }
 
     public newChat(): void {
@@ -106,403 +119,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtml(): string {
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-:root {
-    --bg: var(--vscode-sideBar-background, #1e1e1e);
-    --fg: var(--vscode-sideBar-foreground, #cccccc);
-    --input-bg: var(--vscode-input-background, #3c3c3c);
-    --input-fg: var(--vscode-input-foreground, #cccccc);
-    --border: var(--vscode-panel-border, #333333);
-    --primary: var(--vscode-button-background, #0078d4);
-    --primary-hover: var(--vscode-button-hoverBackground, #1e8ad6);
-    --primary-fg: var(--vscode-button-foreground, #ffffff);
-    --error: var(--vscode-errorForeground, #f48771);
-    --text-block: var(--vscode-textBlockQuote-background, #2d2d2d);
-    --dim: var(--vscode-descriptionForeground, #888888);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
-    font-size: var(--vscode-font-size, 13px);
-    background: var(--bg);
-    color: var(--fg);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Header */
-#header {
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-}
-#header .title {
-    font-weight: 600;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--dim);
-}
-#header button {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--fg);
-    padding: 2px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-}
-#header button:hover {
-    background: var(--primary);
-    color: var(--primary-fg);
-}
-
-/* Status bar */
-#status-bar {
-    padding: 3px 12px;
-    font-size: 11px;
-    color: var(--dim);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-#status-bar .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-#status-bar .dot.disconnected { background: #888; }
-#status-bar .dot.connecting { background: #f0ad4e; animation: pulse 1s infinite; }
-#status-bar .dot.connected { background: #5cb85c; }
-#status-bar .dot.error { background: #d9534f; }
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-/* Messages */
-#messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.message {
-    padding: 8px 10px;
-    border-radius: 6px;
-    line-height: 1.5;
-    word-break: break-word;
-    white-space: pre-wrap;
-    max-width: 95%;
-}
-.message.user {
-    background: var(--text-block);
-    align-self: flex-end;
-}
-.message.assistant {
-    align-self: flex-start;
-    border-left: 3px solid var(--primary);
-    padding-left: 12px;
-}
-.message.tool {
-    align-self: flex-start;
-    font-size: 12px;
-    color: var(--dim);
-    font-style: italic;
-    padding: 2px 8px;
-    max-width: 100%;
-}
-.message .label {
-    font-size: 11px;
-    font-weight: 600;
-    margin-bottom: 3px;
-    opacity: 0.7;
-}
-.message.tool .label { display: none; }
-
-/* Streaming cursor */
-.message.assistant.streaming::after {
-    content: '\u258C';
-    animation: blink 0.8s step-end infinite;
-    margin-left: 2px;
-}
-@keyframes blink {
-    50% { opacity: 0; }
-}
-
-/* Placeholder */
-.placeholder {
-    text-align: center;
-    color: var(--dim);
-    padding: 30px 20px;
-    font-style: italic;
-    font-size: 12px;
-    line-height: 1.8;
-}
-
-/* Input area */
-#input-area {
-    padding: 8px 12px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
-}
-#input-area textarea {
-    flex: 1;
-    background: var(--input-bg);
-    color: var(--input-fg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 6px 8px;
-    resize: none;
-    font-family: inherit;
-    font-size: inherit;
-    outline: none;
-    min-height: 32px;
-    max-height: 120px;
-}
-#input-area textarea:focus {
-    border-color: var(--primary);
-}
-#input-area textarea:disabled {
-    opacity: 0.5;
-}
-#input-area button {
-    background: var(--primary);
-    color: var(--primary-fg);
-    border: none;
-    border-radius: 4px;
-    padding: 6px 14px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-}
-#input-area button:hover {
-    background: var(--primary-hover);
-}
-#input-area button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-#cancelBtn {
-    font-size: 15px;
-    padding: 6px 10px;
-    background: transparent;
-    color: var(--fg);
-    border-color: var(--border);
-}
-#cancelBtn:hover {
-    background: var(--error);
-    color: #fff;
-    border-color: var(--error);
-}
-</style>
-</head>
-<body>
-<div id="header">
-    <span class="title">Hermes Agent</span>
-    <button id="newChatBtn" title="New Chat">+ New</button>
-</div>
-<div id="status-bar">
-    <span class="dot disconnected" id="statusDot"></span>
-    <span id="statusText">Disconnected</span>
-</div>
-<div id="messages">
-    <div class="placeholder" id="placeholder">
-        Connecting to Hermes Agent...<br>
-        <span style="font-size:11px;opacity:0.6">Make sure Hermes is installed and accessible</span>
-    </div>
-</div>
-<div id="input-area">
-    <textarea id="input" rows="1" placeholder="Message Hermes..." disabled></textarea>
-    <button id="cancelBtn" style="display:none" title="Cancel response">⏹</button>
-    <button id="sendBtn" disabled>Send</button>
-</div>
-
-<script>
-(function() {
-    const vscode = acquireVsCodeApi();
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
-    const newChatBtn = document.getElementById('newChatBtn');
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    let placeholder = document.getElementById('placeholder');
-
-    let streamingMessageId = null;
-    let canSend = false;
-    const cancelBtn = document.getElementById('cancelBtn');
-
-    function updateStatus(status, message) {
-        statusDot.className = 'dot ' + status;
-        const labels = {
-            disconnected: 'Disconnected',
-            connecting: 'Connecting...',
-            connected: 'Connected',
-            error: 'Error'
-        };
-        statusText.textContent = message || labels[status] || status;
-
-        canSend = status === 'connected';
-        inputEl.disabled = !canSend;
-        sendBtn.disabled = !canSend;
-        if (canSend) inputEl.focus();
-    }
-
-    function addMessage(role, text) {
-        placeholder.style.display = 'none';
-
-        // For streaming assistant messages, update the last one
-        if (role === 'assistant' && streamingMessageId) {
-            const last = document.getElementById(streamingMessageId);
-            if (last) {
-                last.querySelector('.content').textContent = text;
-                return;
-            }
-        }
-
-        const id = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-        const div = document.createElement('div');
-        div.className = 'message ' + role;
-        div.id = id;
-
-        if (role !== 'tool') {
-            const label = document.createElement('div');
-            label.className = 'label';
-            label.textContent = role === 'user' ? 'You' : 'Hermes';
-            div.appendChild(label);
-        }
-
-        const content = document.createElement('div');
-        content.className = 'content';
-        content.textContent = text;
-        div.appendChild(content);
-
-        // Mark as streaming if assistant message
-        if (role === 'assistant') {
-            div.classList.add('streaming');
-            streamingMessageId = id;
-            cancelBtn.style.display = '';
-        }
-
-        messagesEl.appendChild(div);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function finishStreaming() {
-        if (streamingMessageId) {
-            const el = document.getElementById(streamingMessageId);
-            if (el) el.classList.remove('streaming');
-            streamingMessageId = null;
-        }
-        cancelBtn.style.display = 'none';
-    }
-
-    function newChat() {
-        messagesEl.innerHTML = '<div class="placeholder" id="placeholder">Ready. Start a new conversation.</div>';
-        placeholder = document.getElementById('placeholder');
-        streamingMessageId = null;
-        cancelBtn.style.display = 'none';
-    }
-
-    function sendMessage() {
-        const text = inputEl.value.trim();
-        if (!text || !canSend) return;
-
-        addMessage('user', text);
-        inputEl.value = '';
-        inputEl.style.height = 'auto';
-        inputEl.disabled = true;
-        sendBtn.disabled = true;
-
-        vscode.postMessage({ type: 'sendMessage', text: text });
-    }
-
-    // Auto-resize
-    inputEl.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
-
-    // Enter to send, Shift+Enter for newline
-    inputEl.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    sendBtn.addEventListener('click', sendMessage);
-
-    cancelBtn.addEventListener('click', function() {
-        vscode.postMessage({ type: 'cancel' });
-    });
-
-    newChatBtn.addEventListener('click', function() {
-        vscode.postMessage({ type: 'newChat' });
-    });
-
-    // Messages from extension
-    window.addEventListener('message', function(event) {
-        const msg = event.data;
-        switch (msg.type) {
-            case 'addMessage':
-                if (msg.role === 'assistant') {
-                    addMessage('assistant', msg.text);
-                } else {
-                    addMessage(msg.role, msg.text);
-                }
-                break;
-
-            case 'status':
-                updateStatus(msg.status, msg.message);
-                if (msg.status === 'connected') {
-                    inputEl.disabled = false;
-                    sendBtn.disabled = false;
-                    inputEl.focus();
-                } else if (msg.status === 'error') {
-                    placeholder.textContent = 'Connection error. Try again later.';
-                    placeholder.style.display = 'block';
-                }
-                break;
-
-            case 'newChat':
-                newChat();
-                break;
-
-            case 'streamEnd':
-                finishStreaming();
-                if (canSend) {
-                    inputEl.disabled = false;
-                    sendBtn.disabled = false;
-                    inputEl.focus();
-                }
-                break;
-        }
-    });
-
-    // Signal ready
-    vscode.postMessage({ type: 'ready' });
-})();
-</script>
-</body>
-</html>`;
+        const htmlPath = path.join(this._extensionUri.fsPath, 'media', 'chat.html');
+        return fs.readFileSync(htmlPath, 'utf-8');
     }
 }
