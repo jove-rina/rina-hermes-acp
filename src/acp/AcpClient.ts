@@ -14,11 +14,10 @@ import type {
 } from '@agentclientprotocol/sdk';
 import { PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
 
-export type AcpStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type AcpStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'error';
 
-export type MessageHandler = (role: 'user' | 'assistant' | 'tool', text: string) => void;
+export type MessageHandler = (role: 'user' | 'assistant' | 'tool' | 'thought', text: string) => void;
 export type StatusHandler = (status: AcpStatus, message?: string) => void;
-export type StreamEndHandler = () => void;
 export type PermissionHandler = (prompt: string) => Promise<boolean>;
 export type ConnectionLostHandler = () => void;
 
@@ -27,25 +26,30 @@ export class AcpClient {
     private _app: ReturnType<typeof client> | null = null;
     private _session: ActiveSession | null = null;
     private _conn: ClientConnection | null = null;
-    private _status: AcpStatus = 'disconnected';
+    private _status: AcpStatus = 'idle';
     private _onMessage: MessageHandler;
     private _onStatus: StatusHandler;
-    private _onStreamEnd: StreamEndHandler;
     private _onPermission: PermissionHandler;
     private _onConnectionLost: ConnectionLostHandler;
     private _responseBuffer: string = '';
     private _thoughtBuffer: string = '';
 
+    private static readonly VALID: Record<AcpStatus, AcpStatus[]> = {
+        idle:        ['connecting'],
+        connecting:  ['ready', 'error'],
+        ready:       ['prompting', 'error', 'idle'],
+        prompting:   ['ready', 'error', 'idle'],
+        error:       ['connecting', 'idle'],
+    };
+
     constructor(
         onMessage: MessageHandler,
         onStatus: StatusHandler,
-        onStreamEnd?: StreamEndHandler,
         onPermission?: PermissionHandler,
         onConnectionLost?: ConnectionLostHandler
     ) {
         this._onMessage = onMessage;
         this._onStatus = onStatus;
-        this._onStreamEnd = onStreamEnd || (() => {});
         this._onPermission = onPermission || (async () => true);
         this._onConnectionLost = onConnectionLost || (() => {});
     }
@@ -55,11 +59,9 @@ export class AcpClient {
     }
 
     async start(cwd: string = process.cwd(), hermesPath?: string): Promise<void> {
-        if (this._status === 'connected' || this._status === 'connecting') {
+        if (!this._transitionTo('connecting', 'Starting Hermes ACP...')) {
             return;
         }
-
-        this._setStatus('connecting', 'Starting Hermes ACP...');
 
         try {
             const resolvedPath = hermesPath || await this._findHermes();
@@ -96,14 +98,14 @@ export class AcpClient {
             const stream = ndJsonStream(childInput, childOutput);
 
             this._process.on('error', (err) => {
-                this._setStatus('error', `Process error: ${err.message}`);
+                this._transitionTo('error', `Process error: ${err.message}`);
                 this._onConnectionLost();
             });
 
             this._process.on('exit', (code, signal) => {
-                if (this._status !== 'disconnected') {
-                    this.stop(); // clean up session, app, and process refs
-                    this._setStatus('error', `Process exited (code: ${code}, signal: ${signal})`);
+                if (this._status !== 'idle') {
+                    this.stop();
+                    this._transitionTo('error', `Process exited (code: ${code}, signal: ${signal})`);
                     this._onConnectionLost();
                 }
             });
@@ -122,12 +124,10 @@ export class AcpClient {
                 if (options.length > 0) {
                     const approved = await this._onPermission(title);
                     if (approved) {
-                        // Find the first 'allow' type option
                         const allowOpt = options.find((o: any) =>
                             o.optionId?.startsWith('allow') || o.optionId === 'allow_once');
                         return { outcome: { outcome: 'selected', optionId: allowOpt?.optionId ?? options[0]?.optionId ?? 'allow' } } as any;
                     }
-                    // Find a 'reject' type option
                     const rejectOpt = options.find((o: any) =>
                         o.optionId?.startsWith('reject') || o.optionId === 'deny');
                     if (rejectOpt) {
@@ -142,11 +142,9 @@ export class AcpClient {
                 this._handleSessionUpdate(params);
             });
 
-            // connect() keeps the connection alive (unlike connectWith)
             this._conn = this._app.connect(stream);
             const ctx = this._conn.agent;
 
-            // Explicit initialize with client capabilities
             await ctx.request(methods.agent.initialize, {
                 protocolVersion: PROTOCOL_VERSION,
                 capabilities: {},
@@ -159,47 +157,49 @@ export class AcpClient {
 
             const builder = ctx.buildSession(cwd);
             this._session = await builder.start();
-            this._setStatus('connected', `Session: ${this._session.sessionId}`);
+            this._transitionTo('ready', `Session: ${this._session.sessionId}`);
 
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            this._setStatus('error', `Connection failed: ${msg}`);
+            this._transitionTo('error', `Connection failed: ${msg}`);
             await this.stop();
-            throw err; // rethrow so Provider can null out _acp
+            throw err;
         }
     }
 
     async sendMessage(text: string): Promise<void> {
-        if (!this._session) {
-            this._onMessage('assistant', 'Not connected. Waiting...');
-            this._onStreamEnd(); // re-enable input
+        if (this._status !== 'ready') {
+            this._onMessage('assistant', 'Please wait for connection...');
+            this._transitionTo('ready');
             return;
         }
 
         this._responseBuffer = '';
+        this._thoughtBuffer = '';
+        this._transitionTo('prompting', 'Hermes is thinking...');
 
         try {
-            await this._session.prompt(text);
-            this._onStreamEnd();
+            await this._session!.prompt(text);
+            this._transitionTo('ready');
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             this._onMessage('assistant', `Error: ${msg}`);
-            this._onStreamEnd();
+            this._transitionTo('ready');
         }
     }
 
     async cancel(): Promise<void> {
-        if (!this._session || !this._conn) return;
+        if (this._status !== 'prompting' || !this._session || !this._conn) return;
         try {
             await this._conn.agent.notify(methods.agent.session.cancel, {
                 sessionId: this._session.sessionId
             });
             this._responseBuffer = '';
             this._thoughtBuffer = '';
-            this._onStreamEnd();
         } catch {
-            // cancel is best-effort
+            // best-effort
         }
+        this._transitionTo('ready');
     }
 
     async newSession(cwd: string): Promise<void> {
@@ -213,9 +213,10 @@ export class AcpClient {
             this._thoughtBuffer = '';
             const builder = this._conn.agent.buildSession(cwd);
             this._session = await builder.start();
+            this._transitionTo('ready');
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            this._setStatus('error', `New session failed: ${msg}`);
+            this._transitionTo('error', `New session failed: ${msg}`);
         }
     }
 
@@ -232,7 +233,7 @@ export class AcpClient {
             this._process = null;
         }
 
-        this._setStatus('disconnected');
+        this._transitionTo('idle');
     }
 
     dispose(): void {
@@ -255,12 +256,11 @@ export class AcpClient {
             }
 
             case 'agent_thought_chunk': {
-                // Accumulate thoughts in their own buffer
                 const thought = update.content;
                 const thoughtText = thought?.text || thought?.content?.text || '';
                 if (thoughtText) {
                     this._thoughtBuffer += thoughtText;
-                    this._onMessage('tool', `💭 ${this._thoughtBuffer}`);
+                    this._onMessage('thought', this._thoughtBuffer);
                 }
                 break;
             }
@@ -276,9 +276,8 @@ export class AcpClient {
     }
 
     private async _findHermes(): Promise<string> {
-        // Check if 'hermes' is on PATH via fs.access on common locations
         const candidates = [
-            'hermes',  // will be resolved via PATH by spawn
+            'hermes',
             path.join(os.homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'hermes'),
             '/usr/local/bin/hermes',
             '/opt/homebrew/bin/hermes',
@@ -290,7 +289,6 @@ export class AcpClient {
                     await fs.promises.access(cmd, fs.constants.X_OK);
                     return cmd;
                 }
-                // For non-absolute path, try which as fallback
                 const found = await new Promise<boolean>((resolve) => {
                     const proc = spawn('which', [cmd], { stdio: 'ignore' });
                     proc.on('exit', (code) => resolve(code === 0));
@@ -308,8 +306,14 @@ export class AcpClient {
         );
     }
 
-    private _setStatus(status: AcpStatus, message?: string): void {
+    private _transitionTo(status: AcpStatus, message?: string): boolean {
+        const allowed = AcpClient.VALID[this._status];
+        if (!allowed || !allowed.includes(status)) {
+            console.log(`[hermes] state transition ${this._status} → ${status} not allowed, ignored`);
+            return false;
+        }
         this._status = status;
         this._onStatus(status, message);
+        return true;
     }
 }

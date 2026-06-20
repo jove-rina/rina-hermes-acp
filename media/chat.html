@@ -76,9 +76,10 @@ body {
     border-radius: 50%;
     flex-shrink: 0;
 }
-#status-bar .dot.disconnected { background: #888; }
+#status-bar .dot.idle { background: #888; }
 #status-bar .dot.connecting { background: #f0ad4e; animation: pulse 1s infinite; }
-#status-bar .dot.connected { background: #5cb85c; }
+#status-bar .dot.ready { background: #5cb85c; }
+#status-bar .dot.prompting { background: #5bc0de; animation: pulse 1s infinite; }
 #status-bar .dot.error { background: #d9534f; }
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -239,23 +240,20 @@ body {
     let placeholder = document.getElementById('placeholder');
 
     let streamingMessageId = null;
+    let thoughtMsgId = null;
     let canSend = false;
     const cancelBtn = document.getElementById('cancelBtn');
 
     function updateStatus(status, message) {
         statusDot.className = 'dot ' + status;
         const labels = {
-            disconnected: 'Disconnected',
+            idle: 'Disconnected',
             connecting: 'Connecting...',
-            connected: 'Connected',
+            ready: 'Ready',
+            prompting: 'Thinking...',
             error: 'Error'
         };
         statusText.textContent = message || labels[status] || status;
-
-        canSend = status === 'connected';
-        inputEl.disabled = !canSend;
-        sendBtn.disabled = !canSend;
-        if (canSend) inputEl.focus();
     }
 
     function addMessage(role, text) {
@@ -296,6 +294,7 @@ body {
 
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
+        return id;
     }
 
     function finishStreaming() {
@@ -304,6 +303,7 @@ body {
             if (el) el.classList.remove('streaming');
             streamingMessageId = null;
         }
+        thoughtMsgId = null;
         cancelBtn.style.display = 'none';
     }
 
@@ -311,6 +311,7 @@ body {
         messagesEl.innerHTML = '<div class="placeholder" id="placeholder">Ready. Start a new conversation.</div>';
         placeholder = document.getElementById('placeholder');
         streamingMessageId = null;
+        thoughtMsgId = null;
         cancelBtn.style.display = 'none';
     }
 
@@ -358,6 +359,17 @@ body {
             case 'addMessage':
                 if (msg.role === 'assistant') {
                     addMessage('assistant', msg.text);
+                } else if (msg.role === 'thought') {
+                    // Update the last thought bubble instead of creating a new one
+                    if (thoughtMsgId) {
+                        const el = document.getElementById(thoughtMsgId);
+                        if (el) {
+                            el.querySelector('.content').textContent = msg.text;
+                            break;
+                        }
+                    }
+                    const id = addMessage('tool', `💭 ${msg.text}`);
+                    thoughtMsgId = id;
                 } else {
                     addMessage(msg.role, msg.text);
                 }
@@ -365,27 +377,24 @@ body {
 
             case 'status':
                 updateStatus(msg.status, msg.message);
-                if (msg.status === 'connected') {
+                if (msg.status === 'ready') {
+                    finishStreaming();
                     inputEl.disabled = false;
                     sendBtn.disabled = false;
                     inputEl.focus();
+                } else if (msg.status === 'prompting') {
+                    cancelBtn.style.display = '';
                 } else if (msg.status === 'error') {
-                    placeholder.textContent = 'Connection error. Try again later.';
+                    finishStreaming();
+                    placeholder.textContent = msg.message || 'Connection error. Try again later.';
                     placeholder.style.display = 'block';
+                } else if (msg.status === 'idle') {
+                    finishStreaming();
                 }
                 break;
 
             case 'newChat':
                 newChat();
-                break;
-
-            case 'streamEnd':
-                finishStreaming();
-                if (canSend) {
-                    inputEl.disabled = false;
-                    sendBtn.disabled = false;
-                    inputEl.focus();
-                }
                 break;
         }
     });

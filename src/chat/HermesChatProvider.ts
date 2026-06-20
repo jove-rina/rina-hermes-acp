@@ -63,7 +63,6 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._acp = new AcpClient(
             (role, text) => this._postMessage({ type: 'addMessage', role, text }),
             (status, msg) => this._postMessage({ type: 'status', status, message: msg }),
-            () => this._postMessage({ type: 'streamEnd' }),
             async (prompt) => {
                 const result = await vscode.window.showWarningMessage(
                     `Allow Hermes to run: ${prompt}`,
