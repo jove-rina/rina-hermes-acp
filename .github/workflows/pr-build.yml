@@ -1,0 +1,51 @@
+# PR Build — Compile, test, and package VSIX for manual testing
+# Triggers on every pull request to master.
+# Produces a .vsix file uploaded as a build artifact
+# so reviewers can install and test the extension.
+
+name: PR Build — VSIX
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Run tests (headless)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          xvfb-run --auto-servernum npm test
+        shell: bash
+
+      - name: Package VSIX
+        run: npm run package
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-acp-vsix
+          path: rina-hermes-acp-*.vsix
+          retention-days: 14
+          if-no-files-found: error
