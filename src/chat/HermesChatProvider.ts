@@ -24,6 +24,15 @@ import {
     rebuildAggregatedToolText,
 } from './toolAggregate';
 import { classifyLogLevel, LogLevel } from '../logLevel';
+import {
+    composePromptWithContext,
+    ContextAttachOption,
+    filterAttachableMessages,
+    resolveAttachMessages,
+    resolveCustomAttachMessages,
+} from './contextAttach';
+
+type ContextAttachVisibility = 'onNewSession' | 'always' | 'never';
 
 interface StoredPermissionOption {
     optionId: string;
@@ -124,6 +133,10 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _promptSessionId: string | undefined;
     /** Chat session currently bound to the single ACP agent runtime context. */
     private _acpBoundSessionId: string = '';
+    /** Messages available for one-time context attach after agent reset. */
+    private _contextAttachMessages: ChatMessage[] = [];
+    private _contextAttachActive = false;
+    private _contextAttachAwaitingReply = false;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -199,7 +212,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage((message) => {
             switch (message.type) {
                 case 'sendMessage':
-                    this._enqueueChatOp(() => this._handleUserMessage(message.text));
+                    this._enqueueChatOp(() => this._handleUserMessage(message.text, message.contextAttach));
                     break;
                 case 'cancel':
                     // Cancel must not wait behind an in-flight sendMessage; AcpClient
@@ -257,13 +270,15 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                     this._handleSwitchAgent(message.agentName);
                     break;
                 case 'switchSession':
-                    this._enqueueChatOp(() => this._handleSwitchSession(message.sessionId));
+                    this._enqueueChatOp(() => this._handleSwitchSession(message.sessionId, {
+                        interrupt: message.interrupt === true,
+                    }));
                     break;
                 case 'switchModel':
                     this._handleSwitchModel(message.configId, message.valueId);
                     break;
                 case 'getModels':
-                    this._postModelList();
+                    void this._syncModelState();
                     break;
                 case 'getProfiles':
                     this._postProfileList();
@@ -454,6 +469,91 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
             messages: this._sessionMessages,
             localHistoryOnly: true,
         });
+        this._offerContextAttach(this._sessionMessages);
+    }
+
+    private _offerContextAttach(messages: ChatMessage[]): void {
+        if (this._getContextAttachVisibility() === 'never') {
+            this._clearContextAttachOffer();
+            return;
+        }
+        const hasHistory = messages.some(m => (m.text || '').trim());
+        if (!hasHistory) {
+            this._clearContextAttachOffer();
+            return;
+        }
+        this._contextAttachMessages = filterAttachableMessages(messages);
+        this._contextAttachActive = true;
+        this._postMessage({ type: 'showContextAttach', count: this._contextAttachMessages.length });
+    }
+
+    private _getContextAttachVisibility(): ContextAttachVisibility {
+        const value = vscode.workspace.getConfiguration('hermes').get<string>('contextAttachVisibility', 'onNewSession');
+        if (value === 'always' || value === 'never') {
+            return value;
+        }
+        return 'onNewSession';
+    }
+
+    private _applyContextAttachVisibility(): void {
+        const mode = this._getContextAttachVisibility();
+        if (mode === 'never') {
+            this._clearContextAttachOffer();
+            return;
+        }
+        if (mode === 'always') {
+            this._offerContextAttach(this._sessionMessages);
+            return;
+        }
+        if (this._contextAttachActive && !this._contextAttachAwaitingReply) {
+            this._clearContextAttachOffer();
+        }
+    }
+
+    private _clearContextAttachOffer(): void {
+        if (!this._contextAttachActive && !this._contextAttachAwaitingReply) {
+            return;
+        }
+        this._contextAttachActive = false;
+        this._contextAttachAwaitingReply = false;
+        this._contextAttachMessages = [];
+        this._postMessage({ type: 'hideContextAttach' });
+    }
+
+    private _buildPromptText(userText: string, option: ContextAttachOption | undefined): string {
+        if (!this._contextAttachActive) {
+            return userText;
+        }
+        const attachOption: ContextAttachOption = option?.mode
+            ? option
+            : { mode: 'none' };
+        const picked = attachOption.mode === 'custom'
+            ? resolveCustomAttachMessages(this._sessionMessages, attachOption.indices)
+            : resolveAttachMessages(this._contextAttachMessages, attachOption);
+        if (picked.length === 0) {
+            return userText;
+        }
+        return composePromptWithContext(userText, picked, getWebviewLocale());
+    }
+
+    private _completeContextAttachAfterSuccessfulReply(): void {
+        if (!this._contextAttachAwaitingReply) {
+            return;
+        }
+        this._contextAttachAwaitingReply = false;
+        if (this._getContextAttachVisibility() === 'always') {
+            return;
+        }
+        this._clearContextAttachOffer();
+    }
+
+    private _markSessionResetInWebview(): void {
+        if (this._sessionMessages.length === 0) {
+            this._clearContextAttachOffer();
+            return;
+        }
+        this._postMessage({ type: 'markSessionReset' });
+        this._offerContextAttach(this._sessionMessages);
     }
 
     private _saveMessage(role: string, text: string, toolCallId?: string): void {
@@ -815,10 +915,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
         const agentState = this._acp.getModelListState();
         const hermesModelsRaw = this._acp.getHermesModelsRaw();
-        // Hermes ACP exposes models via session/new; model.options is TUI-only.
-        const modelOptions = (options?.skipModelOptions || hermesModelsRaw)
+        let modelOptions = options?.skipModelOptions
             ? null
             : await this._acp.fetchModelOptions();
+        if (!modelOptions?.providers?.length) {
+            modelOptions = this._acp.getCachedModelOptions();
+        }
         const catalog = resolveModelCatalog(modelOptions, hermesModelsRaw);
         const profileState = loadProfileState(this._historyDir, this._scopeKey);
         const session = this._sessions.find(s => s.id === this._sessionId);
@@ -915,6 +1017,9 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                     this._lastAssistantText = '';
                     this._lastThoughtText = '';
                     this._promptSessionId = undefined;
+                    if (this._isViewingPromptSession()) {
+                        this._completeContextAttachAfterSuccessfulReply();
+                    }
                 }
                 if (status === 'prompting') {
                     this._lastAssistantText = '';
@@ -994,7 +1099,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
             await this._acp.start(cwd, target.configPath, target.cliProfile);
             await this._syncModelState({ skipModelOptions: true });
             await this._applySessionModelPreference();
-            await this._syncModelState({ skipModelOptions: true });
+            await this._syncModelState();
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             this._log(`Connect failed: ${msg}`);
@@ -1223,6 +1328,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                 await this._resetAgentWithModel(valueId, effectiveConfigId);
                 this._acpBoundSessionId = this._sessionId;
                 this._log(`Model active: ${label}`);
+                this._markSessionResetInWebview();
                 return;
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
@@ -1248,7 +1354,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         vscode.window.showWarningMessage(t('hermesNotConnected'));
     }
 
-    private async _handleUserMessage(text: string): Promise<void> {
+    private async _handleUserMessage(text: string, contextAttach?: ContextAttachOption): Promise<void> {
         const epoch = this._sendEpoch;
         await this._awaitSessionReady();
         if (epoch !== this._sendEpoch) {
@@ -1265,6 +1371,10 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._promptSessionId = this._sessionId;
         this._saveMessage('user', text);
         this._markSessionAgentEngaged();
+        if (this._contextAttachActive) {
+            this._contextAttachAwaitingReply = true;
+        }
+        const promptText = this._buildPromptText(text, contextAttach);
         if (epoch !== this._sendEpoch) {
             return;
         }
@@ -1272,11 +1382,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         if (epoch !== this._sendEpoch) {
             return;
         }
-        await this._acp?.sendMessage(text);
+        await this._acp?.sendMessage(promptText);
     }
 
     private async _handleCancel(): Promise<void> {
         this._sendEpoch++;
+        this._contextAttachAwaitingReply = false;
         await this._awaitSessionReady();
         this._flushThoughtToHistory();
         this._lastAssistantText = '';
@@ -1417,6 +1528,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
     private async _handleClearChat(): Promise<void> {
         this._log('Clear Chat');
+        this._clearContextAttachOffer();
         await this._detachActivePrompt(this._sessionId, { savePartial: false });
         this._sessionMessages = [];
         try { fs.unlinkSync(this._msgPath(this._sessionId)); } catch { /* ignore */ }
@@ -1447,6 +1559,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
     private async _handleNewChat(): Promise<void> {
         this._log('New Chat');
+        this._clearContextAttachOffer();
         this._saveCurrentSession();
         this._sessionMessages = [];
         this._sessionId = Date.now().toString(36);
@@ -1459,9 +1572,20 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         await this._syncModelStateForCurrentSession();
     }
 
-    private async _handleSwitchSession(sessionId: string, options?: { skipSaveCurrent?: boolean }): Promise<void> {
+    private async _handleSwitchSession(
+        sessionId: string,
+        options?: { skipSaveCurrent?: boolean; interrupt?: boolean }
+    ): Promise<void> {
         if (sessionId === this._sessionId) {
             return;
+        }
+        if (this._currentSessionIsPrompting()) {
+            if (!options?.interrupt) {
+                return;
+            }
+            await this._detachActivePrompt(this._sessionId, { savePartial: true });
+        } else if (this._otherSessionIsPrompting()) {
+            await this._detachActivePrompt(this._promptSessionId!, { savePartial: true });
         }
         this._log(`Switch to session: ${sessionId}`);
         if (!options?.skipSaveCurrent) {
@@ -1475,6 +1599,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._restoreMessages();
         await this._syncModelStateForCurrentSession();
         this._syncPromptUiIfReturningToOwner();
+    }
+
+    private _currentSessionIsPrompting(): boolean {
+        return this._acp?.status === 'prompting'
+            && !!this._promptSessionId
+            && this._promptSessionId === this._sessionId;
     }
 
     private async _handleDeleteSession(sessionId: string): Promise<void> {
@@ -1860,6 +1990,10 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._postMessage({ type: 'openHelp' });
     }
 
+    public openFaq(): void {
+        this._postMessage({ type: 'openFaq' });
+    }
+
     public reloadSession(): void {
         void this._handleReloadSession();
     }
@@ -1947,6 +2081,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _postPluginInfo(): void {
         const ext = vscode.extensions.getExtension(this._extensionId);
         const pkg = ext?.packageJSON;
+        let iconUri = '';
+        if (this._view) {
+            iconUri = this._view.webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, 'media', 'icon.png')
+            ).toString();
+        }
         this._postMessage({
             type: 'pluginInfo',
             displayName: pkg?.displayName || 'Rina Hermes ACP',
@@ -1954,6 +2094,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
             publisher: pkg?.publisher || '',
             description: pkg?.description || '',
             repository: pkg?.repository?.url || pkg?.repository || '',
+            iconUri,
         });
     }
 
@@ -2024,6 +2165,9 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private async _onConfigurationChanged(e: vscode.ConfigurationChangeEvent): Promise<void> {
         if (e.affectsConfiguration('hermes.showThoughts') || e.affectsConfiguration('hermes.showToolCalls')) {
             this._postConfig();
+        }
+        if (e.affectsConfiguration('hermes.contextAttachVisibility')) {
+            this._applyContextAttachVisibility();
         }
         if (e.affectsConfiguration('hermes.models') || e.affectsConfiguration('hermes.defaultModel')) {
             if (!this._modelState || !isRuntimeModelSource(this._modelState.configId)) {

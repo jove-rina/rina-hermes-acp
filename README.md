@@ -1,14 +1,20 @@
+<div align="center">
+
+<img src="media/icon.png" alt="Rina Hermes ACP icon" width="128" />
+
 # Rina Hermes ACP
 
-**Chat with [Hermes Agent](https://hermes-agent.nousresearch.com) directly inside VS Code — no terminal switching required.**
+**Chat with [Hermes Agent](https://hermes-agent.nousresearch.com) directly inside VS Code or Cursor — no terminal switching required.**
 
-[中文文档](README.zh-CN.md)
+[中文文档](README.zh-CN.md) · [More capabilities](https://app.jove-rina.top)
+
+</div>
 
 ---
 
 ## Overview
 
-Rina Hermes ACP is a VS Code extension that brings your local Hermes Agent into the editor sidebar. Instead of juggling a separate terminal, you get a full chat experience right where you write code.
+Rina Hermes ACP is a VS Code / Cursor extension that brings your local Hermes Agent into the editor sidebar. Instead of juggling a separate terminal, you get a full chat experience right where you write code.
 
 The extension connects to a local `hermes acp` subprocess over the [Agent Client Protocol (ACP)](https://agentclientprotocol.com), so you can ask questions, run tools, and iterate on code without leaving the IDE. Replies stream in real time with Markdown rendering; code blocks can be inserted into the editor with one click; file paths in messages open directly in VS Code.
 
@@ -33,16 +39,31 @@ The extension connects to a local `hermes acp` subprocess over the [Agent Client
 
 ### Requirements
 
-- **VS Code** 1.85 or later
+- **VS Code** 1.85 or later, or **Cursor**
 - **[Hermes Agent](https://hermes-agent.nousresearch.com)** installed and configured
 - `hermes` available on your `PATH` (or set `hermes.path` in Settings)
 
-### Install from VS Code Marketplace
+### Install in VS Code
 
 1. Open VS Code.
 2. Go to **Extensions** (`Ctrl+Shift+X` / `Cmd+Shift+X`).
 3. Search for **Rina Hermes ACP** or **JoveRina**.
 4. Click **Install**.
+
+Or install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=JoveRina.rina-hermes-acp).
+
+### Install in Cursor
+
+1. Open Cursor.
+2. Go to **Extensions** (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+3. Search for **Rina Hermes ACP** or **JoveRina**.
+4. Click **Install**.
+
+Or install from [Open VSX](https://open-vsx.org/extension/JoveRina/rina-hermes-acp) (Cursor extension registry).
+
+### More capabilities
+
+Visit [app.jove-rina.top](https://app.jove-rina.top) for guides, tips, and related tools.
 
 ### Verify installation
 
@@ -195,7 +216,7 @@ We welcome issues, feature requests, and pull requests.
 2. Click **New issue**
 3. Include:
    - VS Code version
-   - Extension version (`0.2.5` or later)
+   - Extension version (`0.3.0` or later)
    - Hermes Agent version (`hermes --version`)
    - Steps to reproduce
    - Expected vs. actual behavior
@@ -209,6 +230,9 @@ We welcome issues, feature requests, and pull requests.
 **Other links**
 
 - Repository: [github.com/jove-rina/rina-hermes-acp](https://github.com/jove-rina/rina-hermes-acp)
+- VS Code Marketplace: [marketplace.visualstudio.com/items?itemName=JoveRina.rina-hermes-acp](https://marketplace.visualstudio.com/items?itemName=JoveRina.rina-hermes-acp)
+- Cursor (Open VSX): [open-vsx.org/extension/JoveRina/rina-hermes-acp](https://open-vsx.org/extension/JoveRina/rina-hermes-acp)
+- More capabilities: [app.jove-rina.top](https://app.jove-rina.top)
 - Hermes Agent docs: [hermes-agent.nousresearch.com](https://hermes-agent.nousresearch.com)
 
 ---

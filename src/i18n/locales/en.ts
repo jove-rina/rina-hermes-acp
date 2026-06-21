@@ -36,11 +36,13 @@ export const en: LocaleStrings = {
     switchModel: 'Switch model',
     model: 'Model',
     models: 'Models',
+    modelPlaceholder: 'Select model',
     newChatBtn: '+ New',
     moreOptions: 'More options',
     menuAbout: 'About',
     menuSettings: 'Settings',
     menuHelp: 'Help',
+    menuFaq: 'FAQ',
     menuLogs: 'Logs',
 
     connectingTitle: 'Connecting to Hermes Agent...',
@@ -72,6 +74,7 @@ export const en: LocaleStrings = {
     noLogs: '(no logs yet)',
     aboutTitle: 'About Rina Hermes ACP',
     helpTitle: 'Help — How to start ACP',
+    faqTitle: 'FAQ',
 
     aboutVersion: 'Version',
     aboutDescription: 'Chat with the local <strong>Hermes Agent</strong> directly in the VS Code sidebar. The extension starts a <code>hermes acp</code> subprocess via the ACP protocol, with streaming replies, multi-session tabs, model switching, and terminal integration.',
@@ -112,6 +115,71 @@ hermes --profile &lt;name&gt; acp</code></pre>
                 <li>Open <strong>More → Logs</strong> from the view title bar to inspect ERROR/WARNING logs</li>
             </ul>`,
 
+    faqHtml: `
+            <h3>1. Why does switching model/session "reset" the conversation?</h3>
+            <p><strong>Your chat history is not lost</strong> — only the Hermes Agent's <strong>in-memory context</strong> is cleared.</p>
+            <p>Over ACP, the underlying agent maintains one conversation context at a time. These actions trigger <code>newSession</code> and clear agent memory:</p>
+            <ul>
+                <li><strong>Switching model</strong> — requires a new ACP session for the new model</li>
+                <li><strong>Switching tabs (sessions)</strong> — each tab may use a different model; switching back rebinds the agent to that tab's model and state</li>
+            </ul>
+            <p>You will see the <strong>"Prior session memory above — not carried into the new session"</strong> divider: messages above are restored from disk for <strong>viewing only</strong>; the agent does not remember them. New messages below the divider <strong>do not automatically include</strong> the conversation above as context.</p>
+            <p>This is an architectural limitation of Hermes ACP, <strong>not a bug</strong>.</p>
+            <p><strong>How to continue a prior discussion?</strong> After a reset, the input area may show <strong>"Session reset? Attach prior session memory?"</strong> You can attach selected prior messages as reference text to your next send (uses more input tokens). Only <strong>user, assistant, and permission</strong> messages count as attachable memory; thought and tool messages are excluded.</p>
+            <ul>
+                <li>Default: shown once after reset, <strong>disappears after the first successful reply</strong></li>
+                <li>Adjust in Settings via <code>hermes.contextAttachVisibility</code>: <code>onNewSession</code> (default) / <code>always</code> / <code>never</code></li>
+            </ul>
+            <p class="dim"><strong>Tip:</strong> stay in one tab for continuous context; use memory attach after switching; copy or export important conclusions.</p>
+
+            <h3>2. What happens to the model when I switch sessions?</h3>
+            <p>Each tab <strong>remembers its own</strong> model choice. After you switch model in a tab, it is saved to that session's metadata and restored when you return.</p>
+            <ul>
+                <li><strong>New tab</strong>: if no model was chosen yet, inherits the most recently used model under the current Profile</li>
+                <li><strong>Switch tab</strong>: restores that tab's model and resets agent context (see above)</li>
+                <li><strong>Model no longer available</strong>: warning "Saved model … is no longer available" — pick a new one manually</li>
+                <li><strong>While generating</strong>: cannot switch model; switching tabs may interrupt an in-flight reply on another tab</li>
+            </ul>
+
+            <h3>3. What changes when I switch Profile?</h3>
+            <p>Switching Profile <strong>reconnects the Hermes subprocess</strong> (like restarting <code>hermes --profile &lt;name&gt; acp</code>).</p>
+            <ul>
+                <li><strong>Different session list</strong> — each Profile / named agent in <code>hermes.agents</code> has separate local storage; tab history, active tab, and model preferences do not carry over</li>
+                <li><strong>Model list refreshes</strong> — from models exposed by Hermes under the new Profile; may differ completely</li>
+                <li><strong>Chat content</strong> — reloads the active session under the new Profile</li>
+                <li><strong>Settings changes</strong> — editing <code>hermes.profile</code>, <code>hermes.path</code>, etc. also reconnects, similar to switching Profile</li>
+            </ul>
+
+            <h3>4. Why isn't the model list complete?</h3>
+            <p>The list shows models <strong>actually available under the current Hermes Profile</strong>, not every model on the internet. The extension fetches them via ACP (<code>models.availableModels</code> from <code>session/new</code>, or <code>model.options</code>).</p>
+            <p><strong>Common reasons:</strong></p>
+            <ul>
+                <li>Provider or API key not configured in the Profile</li>
+                <li>Profile only enables a subset of models</li>
+                <li>Hermes version or ACP did not return the full list</li>
+                <li>Agent not connected or returned no list — configure fallback <code>hermes.models</code> in Settings</li>
+            </ul>
+            <p class="dim">Check: run <code>hermes acp</code> in a terminal with the same Profile; review Hermes config files.</p>
+
+            <h3>5. Will this extension keep getting updates?</h3>
+            <p><strong>Yes.</strong> Published on the VS Code Marketplace; use <strong>More → Check for Updates</strong> to check and jump to this extension.</p>
+            <p>Hermes Agent and this extension <strong>evolve independently</strong>: the extension tracks ACP, model selection, Profile support, etc.; underlying capabilities depend on Hermes itself. Watch <a href="#" data-url="https://github.com/jove-rina/rina-hermes-acp">Releases and Issues on GitHub</a>.</p>
+
+            <h3>6. How do I report a bug?</h3>
+            <p>Open an Issue on GitHub:<br><a href="#" data-url="https://github.com/jove-rina/rina-hermes-acp/issues">github.com/jove-rina/rina-hermes-acp/issues</a></p>
+            <p><strong>Please include:</strong></p>
+            <ul>
+                <li>VS Code version (Help → About)</li>
+                <li>Extension version (More → About)</li>
+                <li>Hermes version (<code>hermes --version</code> in terminal)</li>
+                <li>Steps to reproduce, expected vs actual behavior</li>
+                <li>Relevant logs (More → Logs, copy ERROR / WARNING lines)</li>
+            </ul>
+
+            <h3>7. How do I suggest a new feature?</h3>
+            <p>Same channel: <a href="#" data-url="https://github.com/jove-rina/rina-hermes-acp/issues">GitHub Issues</a>, with <code>[Feature Request]</code> in the title.</p>
+            <p>Describe the <strong>use case</strong>, <strong>expected behavior</strong>, and whether alternatives are acceptable. The more specific, the easier to prioritize.</p>`,
+
     roleYou: 'You',
     roleHermes: 'Hermes',
     roleThought: 'Thought',
@@ -148,6 +216,7 @@ hermes --profile &lt;name&gt; acp</code></pre>
     noActiveEditor: 'Open an editor first',
     selectMessages: 'Select',
     multiSelectAll: 'Select all',
+    multiSelectDeselectAll: 'Deselect all',
     multiSelectDelete: 'Delete',
     multiSelectCopy: 'Copy',
     multiSelectExport: 'Export',
@@ -172,7 +241,30 @@ hermes --profile &lt;name&gt; acp</code></pre>
     sessionExportModel: 'Model: {0}',
     sessionExportDate: 'Date: {0}',
     sessionRendering: 'Rendering messages…',
-    localHistoryDivider: 'Local chat history only',
-    localHistoryDividerTitle: 'Agent context was reset; new messages will not include the conversation above',
+    localHistoryDivider: 'Prior session memory above — not carried into the new session',
+    localHistoryDividerTitle: 'Historical session memory is not automatically included in the new agent context',
     localHistoryBadge: 'Local',
+
+    switchSessionPromptTitle: 'Hermes is responding',
+    switchSessionPromptBody: 'Switching sessions will interrupt the current reply. Wait for it to finish, or confirm to switch.',
+    switchSessionConfirm: 'Switch',
+    switchSessionStay: 'Stay',
+
+    contextAttachHeaderLead: 'Session reset?',
+    contextAttachHeaderRest: 'Attach prior session memory? Selecting memory uses more input tokens.',
+    contextAttachTooltip: 'Hermes resets the session when you switch models or sessions. The new session has no memory of the prior context. Use this option to continue with prior memory.\nMemory includes user, assistant, and permission messages only — thought and tool messages are excluded.\nNote: This option appears only once in a new session and disappears after the first successful reply.',
+    contextAttachPlaceholder: 'Select session memory',
+    contextAttachNone: 'Do not attach prior session memory',
+    contextAttachLast2: 'Attach last 2 conversation memories (user/assistant/permission)',
+    contextAttachLast10: 'Attach last 10 conversation memories (user/assistant/permission)',
+    contextAttachAll: 'Attach all conversation memories (user/assistant/permission)',
+    contextAttachCustom: 'Choose conversation memories',
+    contextAttachCustomNone: 'You have not selected any memories',
+    contextAttachConfirm: 'Attach selected',
+    contextAttachSelected: 'Attach {0} selected memories from prior session',
+    contextAttachPrefixHeader: 'Prior session memory for reference:',
+    contextAttachSendPrompt: 'You selected session memory. Attach it to this message?',
+    contextAttachSendYes: 'Attach',
+    contextAttachSendNo: 'Do not attach',
+    contextAttachPreviewTitle: 'Memory to attach ({0} selected / ~{1} input tokens)',
 };

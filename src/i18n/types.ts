@@ -38,11 +38,13 @@ export interface LocaleStrings {
     switchModel: string;
     model: string;
     models: string;
+    modelPlaceholder: string;
     newChatBtn: string;
     moreOptions: string;
     menuAbout: string;
     menuSettings: string;
     menuHelp: string;
+    menuFaq: string;
     menuLogs: string;
 
     // WebView — placeholder & connection
@@ -77,6 +79,7 @@ export interface LocaleStrings {
     noLogs: string;
     aboutTitle: string;
     helpTitle: string;
+    faqTitle: string;
 
     // WebView — about (rendered in JS)
     aboutVersion: string;
@@ -89,6 +92,7 @@ export interface LocaleStrings {
 
     // WebView — help (HTML body)
     helpHtml: string;
+    faqHtml: string;
 
     // WebView — messages & misc
     roleYou: string;
@@ -127,6 +131,7 @@ export interface LocaleStrings {
     noActiveEditor: string;
     selectMessages: string;
     multiSelectAll: string;
+    multiSelectDeselectAll: string;
     multiSelectDelete: string;
     multiSelectCopy: string;
     multiSelectExport: string;
@@ -154,6 +159,29 @@ export interface LocaleStrings {
     localHistoryDivider: string;
     localHistoryDividerTitle: string;
     localHistoryBadge: string;
+
+    switchSessionPromptTitle: string;
+    switchSessionPromptBody: string;
+    switchSessionConfirm: string;
+    switchSessionStay: string;
+
+    contextAttachHeaderLead: string;
+    contextAttachHeaderRest: string;
+    contextAttachTooltip: string;
+    contextAttachPlaceholder: string;
+    contextAttachNone: string;
+    contextAttachLast2: string;
+    contextAttachLast10: string;
+    contextAttachAll: string;
+    contextAttachCustom: string;
+    contextAttachCustomNone: string;
+    contextAttachConfirm: string;
+    contextAttachSelected: string;
+    contextAttachPrefixHeader: string;
+    contextAttachSendPrompt: string;
+    contextAttachSendYes: string;
+    contextAttachSendNo: string;
+    contextAttachPreviewTitle: string;
 }
 
 export type LocaleKey = keyof LocaleStrings;

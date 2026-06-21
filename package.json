@@ -2,7 +2,7 @@
   "name": "rina-hermes-acp",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "publisher": "JoveRina",
   "icon": "media/icon.png",
   "license": "MIT",
@@ -78,6 +78,11 @@
         "icon": "$(question)"
       },
       {
+        "command": "hermes.openFaq",
+        "title": "%commands.hermes.openFaq.title%",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "hermes.openLogs",
         "title": "%commands.hermes.openLogs.title%",
         "icon": "$(output)"
@@ -136,6 +141,10 @@
           "group": "2@2"
         },
         {
+          "command": "hermes.openFaq",
+          "group": "2@3"
+        },
+        {
           "command": "hermes.openLogs",
           "group": "3@1"
         }
@@ -174,6 +183,17 @@
           "type": "boolean",
           "default": true,
           "description": "%configuration.hermes.showToolCalls.description%"
+        },
+        "hermes.contextAttachVisibility": {
+          "type": "string",
+          "default": "onNewSession",
+          "enum": ["onNewSession", "always", "never"],
+          "enumDescriptions": [
+            "%configuration.hermes.contextAttachVisibility.onNewSession.description%",
+            "%configuration.hermes.contextAttachVisibility.always.description%",
+            "%configuration.hermes.contextAttachVisibility.never.description%"
+          ],
+          "description": "%configuration.hermes.contextAttachVisibility.description%"
         },
         "hermes.models": {
           "type": "array",

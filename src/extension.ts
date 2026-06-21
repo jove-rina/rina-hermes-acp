@@ -67,6 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
     bindChatCommand(context, 'hermes.checkUpdate', provider => provider.checkForUpdate());
     bindChatCommand(context, 'hermes.openAbout', provider => provider.openAbout());
     bindChatCommand(context, 'hermes.openHelp', provider => provider.openHelp());
+    bindChatCommand(context, 'hermes.openFaq', provider => provider.openFaq());
     bindChatCommand(context, 'hermes.openLogs', provider => provider.openLogs());
 
     console.log('Rina Hermes ACP activated');

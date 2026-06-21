@@ -153,6 +153,8 @@ export class AcpClient {
     private _hermesSetModelKnownUnsupported = false;
     private _setConfigOptionKnownUnsupported = false;
     private _modelOptionsFetchPromise: Promise<AcpModelOptionsResponse | null> | null = null;
+    /** Full provider catalog from ``model.options``; survives sparse session model updates. */
+    private _cachedModelOptions: AcpModelOptionsResponse | null = null;
 
     private static readonly VALID: Record<AcpStatus, AcpStatus[]> = {
         idle:        ['connecting'],
@@ -209,6 +211,10 @@ export class AcpClient {
         return this._hermesModelsRaw;
     }
 
+    getCachedModelOptions(): AcpModelOptionsResponse | null {
+        return this._cachedModelOptions;
+    }
+
     /** Fetch grouped model catalog via Hermes ACP ``model.options`` (best-effort). */
     async fetchModelOptions(): Promise<AcpModelOptionsResponse | null> {
         if (!this._conn || !this._session || this._modelOptionsKnownUnsupported) {
@@ -236,7 +242,11 @@ export class AcpClient {
             if (!response || typeof response !== 'object') {
                 return null;
             }
-            return response as AcpModelOptionsResponse;
+            const parsed = response as AcpModelOptionsResponse;
+            if (parsed.providers?.length) {
+                this._cachedModelOptions = parsed;
+            }
+            return parsed;
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (this._isMethodNotFoundError(err)) {

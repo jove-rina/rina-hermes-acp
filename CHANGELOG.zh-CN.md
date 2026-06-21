@@ -6,6 +6,21 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-06-21
+
+### 新增
+
+- **会话记忆附带**：Agent 重置（切换模型或会话）后，可将上轮消息作为参考文本附带到下一条发送 —— 支持最近 2 条、最近 10 条、全部或自选，含预览与 Token 估算
+- **`hermes.contextAttachVisibility` 设置**：控制记忆选择框显示时机 —— `onNewSession`（默认）/ `always` / `never`
+- **FAQ 弹窗**（更多 → FAQ）：涵盖会话重置机制、模型/会话切换、Profile 切换、模型列表、更新与 BUG 提交
+- **会话重置分隔线**：聊天 UI 标注从本地恢复的消息（仅供查看，不会带入 Agent 上下文）
+- **切换会话确认**：生成回复过程中切换 Tab 时弹出确认提示
+- `contextAttach` 模块单元测试
+
+### 修复
+
+- 模型列表在 ACP 重新拉取为空时，回退到已缓存的选项
+
 ## [0.2.6] - 2026-06-21
 
 ### 新增
@@ -69,6 +84,7 @@
 - 面向市场的图标、README 与 VSIX 打包（bundle 中排除 icon.svg）。
 - 显示名称定为 **Rina Hermes ACP**（此前受 Marketplace 命名限制经历 **Hermes AI Chat** 等调整）。
 
+[0.3.0]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.2...v0.2.5
 [0.2.2]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.0...v0.2.2

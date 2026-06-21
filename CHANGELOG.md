@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-21
+
+### Added
+
+- **Session memory attach**: After an agent reset (model or session switch), optionally attach prior messages as reference text to the next send — last 2, last 10, all, or custom selection with preview and token estimate
+- **`hermes.contextAttachVisibility` setting**: Control when the memory picker appears — `onNewSession` (default) / `always` / `never`
+- **FAQ modal** (More → FAQ): Covers session reset behavior, model/session switching, Profile changes, model list completeness, updates, and bug reporting
+- **Session reset divider** in chat UI marking messages restored from local history (view-only, not carried into agent context)
+- **Session switch confirmation** when switching tabs during an active reply
+- Unit tests for `contextAttach` module
+
+### Fixed
+
+- Model list falls back to cached ACP options when a fresh fetch returns empty
+
 ## [0.2.6] - 2026-06-21
 
 ### Added
@@ -37,5 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - After approval or tool calls, subsequent assistant replies no longer incorrectly append to old bubbles but start a new message segment
 - `allow_session` option no longer incorrectly displays as "Always allow" (`optionId` takes priority over `kind` mapping)
 
+[0.3.0]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.2...v0.2.5

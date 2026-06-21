@@ -247,6 +247,113 @@ body {
     color: var(--dim);
     font-size: 11px;
 }
+.about-brand {
+    text-align: center;
+    margin: 0 0 12px;
+}
+.about-brand img {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+    display: inline-block;
+}
+/* FAQ accordion */
+.faq-modal-body {
+    padding: 10px 12px;
+}
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.faq-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--fg) 3%, transparent);
+    overflow: hidden;
+}
+.faq-item[open] {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.faq-summary {
+    cursor: pointer;
+    padding: 10px 12px 10px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--fg);
+    list-style: none;
+    position: relative;
+    user-select: none;
+}
+.faq-summary::-webkit-details-marker,
+.faq-summary::marker {
+    display: none;
+    content: '';
+}
+.faq-summary::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--dim);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(-50%);
+    transition: transform 0.15s ease;
+}
+.faq-item[open] > .faq-summary {
+    color: var(--primary);
+}
+.faq-item[open] > .faq-summary::before {
+    transform: translateY(-50%) rotate(90deg);
+    border-left-color: var(--primary);
+}
+.faq-body {
+    padding: 2px 12px 12px;
+    border-top: 1px solid var(--border);
+    color: var(--dim);
+}
+.faq-body p {
+    margin: 0 0 8px;
+    color: var(--dim);
+}
+.faq-body ul {
+    margin: 0 0 8px;
+    padding-left: 18px;
+}
+.faq-body li {
+    margin-bottom: 4px;
+    color: var(--dim);
+}
+.faq-body strong {
+    color: color-mix(in srgb, var(--fg) 80%, var(--dim));
+    font-weight: 600;
+}
+.faq-body a {
+    color: var(--primary);
+}
+.faq-body code {
+    color: color-mix(in srgb, var(--fg) 65%, var(--dim));
+}
+.faq-body .dim {
+    color: color-mix(in srgb, var(--dim) 90%, transparent);
+}
+.faq-body pre {
+    background: var(--vscode-textCodeBlock-background, #1e1e1e);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 6px 0 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 .dropdown-item {
     padding: 6px 10px;
     cursor: pointer;
@@ -1190,11 +1297,39 @@ body {
     cursor: default;
 }
 .multi-select-toolbar button.ms-exit {
+    margin-left: 0;
+}
+.multi-select-toolbar .ms-actions-end {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin-left: auto;
 }
-.multi-select-toolbar button.ms-danger:hover:not(:disabled) {
-    border-color: var(--error);
-    color: var(--error);
+.multi-select-toolbar button.ms-attach-confirm {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: var(--primary);
+    font-weight: 700;
+    padding: 5px 14px;
+    animation: ms-attach-pulse 1.2s ease-in-out infinite;
+}
+.multi-select-toolbar button.ms-attach-confirm:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+.multi-select-toolbar button.ms-attach-confirm:disabled {
+    opacity: 0.55;
+    animation: ms-attach-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ms-attach-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 50%, transparent);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 14px 3px color-mix(in srgb, var(--primary) 65%, transparent);
+        transform: scale(1.04);
+    }
 }
 
 /* File reference links */
@@ -1427,52 +1562,298 @@ body {
 }
 .input-composite-shell {
     position: relative;
-    padding-top: 2px;
+    overflow: visible;
 }
-.input-model-picker {
+.input-picker-row {
     position: absolute;
-    top: 0;
-    left: 10px;
-    transform: translateY(-50%);
-    z-index: 6;
+    left: 8px;
+    bottom: 5px;
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    max-width: min(340px, 78vw);
 }
-.input-model-picker .input-model-btn {
+.input-model-picker,
+.input-context-picker {
+    position: static;
+    max-width: min(160px, 36vw);
+    flex-shrink: 1;
+}
+.input-context-picker[hidden] {
+    display: none !important;
+}
+.input-context-picker.is-hiding {
+    animation: context-attach-exit 0.32s ease-in forwards;
+    pointer-events: none;
+}
+.input-context-picker.is-entering {
+    animation: context-attach-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.input-context-picker.is-attention .input-context-btn {
+    animation: context-attach-attention-pulse 0.75s ease-in-out 3 both;
+}
+.input-model-picker .input-model-btn.is-placeholder,
+.input-context-picker .input-context-btn.is-placeholder {
+    color: color-mix(in srgb, var(--dim) 88%, transparent);
+}
+@keyframes context-attach-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes context-attach-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(4px) scale(0.92);
+    }
+}
+@keyframes context-attach-attention-pulse {
+    0%, 100% {
+        color: var(--dim);
+        background: transparent;
+        box-shadow: none;
+    }
+    50% {
+        color: color-mix(in srgb, var(--primary) 90%, var(--fg));
+        background: color-mix(in srgb, var(--primary) 22%, transparent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent),
+            0 0 14px 2px color-mix(in srgb, var(--primary) 35%, transparent);
+    }
+}
+.input-model-picker .input-model-btn,
+.input-context-picker .input-context-btn {
     display: inline-flex;
     align-items: center;
-    max-width: min(180px, 42vw);
-    padding: 1px 8px;
-    font-size: 10px;
+    gap: 4px;
+    max-width: min(160px, 36vw);
+    padding: 3px 6px;
+    font-size: 11px;
     line-height: 1.35;
     font-family: inherit;
-    background: var(--bg);
+    background: transparent;
     color: var(--dim);
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
+    overflow: hidden;
+    transition: color 0.15s, background 0.15s;
+}
+.input-picker-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    opacity: 0.82;
+}
+.input-picker-icon svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    display: block;
+}
+.input-picker-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    min-width: 0;
 }
-.input-model-picker .input-model-btn:hover {
+.input-model-picker .input-model-btn:hover,
+.input-context-picker .input-context-btn:hover {
     color: var(--fg);
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 .input-composite-shell:focus-within .input-model-btn,
-.input-model-picker.is-open .input-model-btn {
+.input-composite-shell:focus-within .input-context-btn,
+.input-model-picker.is-open .input-model-btn,
+.input-context-picker.is-open .input-context-btn {
     color: var(--fg);
-    border-color: var(--primary);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
 }
-.input-model-picker .dropdown {
+.input-model-picker .dropdown,
+.input-context-picker .dropdown {
     top: auto;
     bottom: calc(100% + 6px);
     left: 0;
-    min-width: 220px;
+    min-width: 260px;
+    max-width: min(320px, 92vw);
+}
+.context-attach-header {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px;
+    line-height: 1.45;
+    white-space: normal;
+    padding: 10px 10px 9px;
+    margin: 0;
+    background: color-mix(in srgb, var(--primary) 14%, var(--bg));
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 38%, var(--border));
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.context-attach-header #contextAttachHeaderLead {
+    color: color-mix(in srgb, var(--primary) 85%, var(--fg));
+}
+.context-attach-options {
+    padding: 4px 0 2px;
+}
+.context-attach-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, var(--bg));
+    color: color-mix(in srgb, var(--primary) 80%, var(--fg));
+    font-size: 10px;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+    position: relative;
+}
+.context-attach-tooltip {
+    position: fixed;
+    z-index: 10000;
+    max-width: min(300px, calc(100vw - 24px));
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    color: var(--fg);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.45;
+    white-space: pre-line;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+.context-attach-preview {
+    position: fixed;
+    z-index: 10000;
+    width: min(320px, calc(100vw - 24px));
+    max-height: min(280px, 40vh);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
+}
+.context-attach-preview[hidden] {
+    display: none !important;
+}
+.context-attach-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 6px 7px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    flex-shrink: 0;
+}
+.context-attach-preview-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--primary) 80%, var(--fg));
+}
+.context-attach-preview-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--dim);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+.context-attach-preview-close:hover {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.context-attach-preview-list {
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    overflow-y: auto;
+}
+.context-attach-preview-item {
+    padding: 5px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.context-attach-preview-item:last-child {
+    border-bottom: none;
+}
+.context-attach-preview-role {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--dim);
+    margin-bottom: 2px;
+}
+.context-attach-preview-text {
+    display: block;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--fg);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 4.2em;
+    overflow: hidden;
+}
+.multi-select-toolbar button.ms-danger:hover:not(:disabled) {
+    border-color: var(--error);
+    color: var(--error);
+}
+.switch-session-body {
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg);
+}
+.switch-session-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+.input-model-picker {
+    max-width: min(160px, 36vw);
+}
+.input-model-picker .input-model-btn {
+    max-width: min(160px, 36vw);
 }
 .input-composite {
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
+    align-items: stretch;
     background: var(--input-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -1482,8 +1863,20 @@ body {
 .input-composite:focus-within {
     border-color: var(--primary);
 }
-.input-composite.waiting {
+.input-composite-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 0 3px 3px min(350px, 80vw);
+    border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+.input-composite-shell.waiting .input-composite {
     animation: input-border-glow 1.8s ease-in-out infinite;
+}
+.input-composite-shell.waiting .input-model-btn,
+.input-composite-shell.waiting .input-context-btn {
+    animation: input-model-text-glow 1.8s ease-in-out infinite;
 }
 @keyframes input-border-glow {
     0%, 100% {
@@ -1495,12 +1888,17 @@ body {
         box-shadow: 0 0 10px 2px color-mix(in srgb, var(--primary) 50%, transparent);
     }
 }
+@keyframes input-model-text-glow {
+    0%, 100% { color: var(--dim); }
+    50% { color: var(--primary); }
+}
 .input-composite textarea {
-    flex: 1;
+    flex: 0 0 auto;
+    width: 100%;
     background: transparent;
     color: var(--input-fg);
     border: none;
-    padding: 8px 10px;
+    padding: 8px 10px 6px;
     resize: none;
     font-family: inherit;
     font-size: inherit;
@@ -1508,13 +1906,14 @@ body {
     min-height: 36px;
     max-height: var(--input-max-height, 120px);
     line-height: 1.4;
+    overflow-y: auto;
 }
 .input-composite textarea:disabled {
     opacity: 0.5;
 }
 .input-action {
     flex-shrink: 0;
-    padding: 2px 3px 2px 2px;
+    padding: 0;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -1983,7 +2382,10 @@ mark.search-mark-active {
         <button type="button" id="multiSelectDeleteBtn" class="ms-danger" disabled></button>
         <button type="button" id="multiSelectCopyBtn" disabled></button>
         <button type="button" id="multiSelectExportBtn" disabled></button>
-        <button type="button" id="multiSelectExitBtn" class="ms-exit"></button>
+        <div class="ms-actions-end">
+            <button type="button" id="multiSelectAttachConfirmBtn" class="ms-attach-confirm" hidden disabled></button>
+            <button type="button" id="multiSelectExitBtn" class="ms-exit"></button>
+        </div>
     </div>
     <div class="input-quick-panel" id="inputQuickPanel" aria-hidden="true">
         <div class="input-quick-panel-inner">
@@ -2016,31 +2418,50 @@ mark.search-mark-active {
             <svg class="quick-toggle-chevron" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 10.5 8 7l3.5 3.5-.7.7L8 8.4l-2.8 2.8-.7-.7z"/></svg>
         </button>
         <div class="input-composite-shell">
+            <div class="input-picker-row">
             <div class="picker input-model-picker" id="modelPicker">
                 <button type="button" class="input-model-btn" id="modelBtn" title="">
-                    <span id="modelLabel">—</span>
+                    <span class="input-picker-icon" aria-hidden="true"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 1 2 4.2v7.6L8 15l6-3.2V4.2L8 1zm0 1.5 4.3 2.3L8 7.1 3.7 4.8 8 2.5zM3 6.1l5 2.7 5-2.7v4.8l-5 2.7-5-2.7V6.1z"/></svg></span>
+                    <span class="input-picker-label" id="modelLabel"></span>
                 </button>
                 <div class="dropdown" id="modelDropdown" style="display:none">
                     <div class="dropdown-header" id="modelsHeader"></div>
                     <div id="modelList"></div>
                 </div>
             </div>
+            <div class="picker input-context-picker" id="contextAttachPicker" hidden>
+                <button type="button" class="input-context-btn" id="contextAttachBtn" title="">
+                    <span class="input-picker-icon" aria-hidden="true"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6z"/><path d="M8 4v3.8l2.5 1.5-.8 1.3-3.3-2V4h1.6z"/></svg></span>
+                    <span class="input-picker-label" id="contextAttachLabel"></span>
+                </button>
+                <div class="dropdown" id="contextAttachDropdown" style="display:none">
+                    <div class="dropdown-header context-attach-header">
+                        <span id="contextAttachHeaderLead"></span>
+                        <span class="context-attach-help" id="contextAttachHelp" tabindex="0" role="button" aria-label="">?</span>
+                        <span id="contextAttachHeaderRest"></span>
+                    </div>
+                    <div class="context-attach-options" id="contextAttachList"></div>
+                </div>
+            </div>
+            </div>
             <div class="input-composite" id="inputComposite">
             <textarea id="input" rows="1" disabled></textarea>
-            <div class="input-action">
-                <div class="token-usage-ring" id="tokenUsageRing" hidden>
-                    <svg viewBox="0 0 28 28" aria-hidden="true">
-                        <circle class="token-ring-bg" cx="14" cy="14" r="11"></circle>
-                        <circle class="token-ring-fg" id="tokenUsageArc" cx="14" cy="14" r="11"></circle>
-                    </svg>
-                    <span class="token-usage-label" id="tokenUsagePct" aria-hidden="true"></span>
-                </div>
-                <div class="input-submit-slot">
-                    <button id="sendBtn" disabled></button>
-                    <button id="cancelBtn" class="hidden stop-btn">
-                        <span class="stop-btn-spinner" aria-hidden="true"></span>
-                        <span id="stopBtnLabel"></span>
-                    </button>
+            <div class="input-composite-bar">
+                <div class="input-action">
+                    <div class="token-usage-ring" id="tokenUsageRing" hidden>
+                        <svg viewBox="0 0 28 28" aria-hidden="true">
+                            <circle class="token-ring-bg" cx="14" cy="14" r="11"></circle>
+                            <circle class="token-ring-fg" id="tokenUsageArc" cx="14" cy="14" r="11"></circle>
+                        </svg>
+                        <span class="token-usage-label" id="tokenUsagePct" aria-hidden="true"></span>
+                    </div>
+                    <div class="input-submit-slot">
+                        <button id="sendBtn" disabled></button>
+                        <button id="cancelBtn" class="hidden stop-btn">
+                            <span class="stop-btn-spinner" aria-hidden="true"></span>
+                            <span id="stopBtnLabel"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2069,6 +2490,55 @@ mark.search-mark-active {
     </div>
 </div>
 
+<div id="faqModal" class="info-modal modal-overlay">
+    <div class="modal-panel" style="max-width:min(560px,100%)">
+        <div class="modal-header">
+            <span class="modal-header-title" id="faqModalTitle"></span>
+            <button class="close-info-modal modal-close-btn">✕</button>
+        </div>
+        <div class="info-modal-body faq-modal-body" id="faqModalBody"></div>
+    </div>
+</div>
+
+<div id="switchSessionModal" class="modal-overlay">
+    <div class="modal-panel" style="max-width:min(400px,100%)">
+        <div class="modal-header">
+            <span class="modal-header-title" id="switchSessionModalTitle"></span>
+        </div>
+        <div class="switch-session-body">
+            <p id="switchSessionModalBody"></p>
+            <div class="switch-session-actions">
+                <button type="button" class="toolbar-btn" id="switchSessionStayBtn"></button>
+                <button type="button" class="toolbar-btn primary" id="switchSessionConfirmBtn"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="contextAttachSendModal" class="modal-overlay">
+    <div class="modal-panel" style="max-width:min(400px,100%)">
+        <div class="modal-header">
+            <span class="modal-header-title" id="contextAttachSendModalTitle"></span>
+        </div>
+        <div class="switch-session-body">
+            <p id="contextAttachSendModalBody"></p>
+            <div class="switch-session-actions">
+                <button type="button" class="toolbar-btn" id="contextAttachSendNoBtn"></button>
+                <button type="button" class="toolbar-btn primary" id="contextAttachSendYesBtn"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="contextAttachTooltip" class="context-attach-tooltip" hidden></div>
+<div id="contextAttachPreview" class="context-attach-preview" hidden>
+    <div class="context-attach-preview-header">
+        <div class="context-attach-preview-title" id="contextAttachPreviewTitle"></div>
+        <button type="button" class="context-attach-preview-close" id="contextAttachPreviewClose" aria-label="✕">✕</button>
+    </div>
+    <ul class="context-attach-preview-list" id="contextAttachPreviewList"></ul>
+</div>
+
 <script>
 (function() {
     let locale = {{LOCALE_JSON}};
@@ -2079,6 +2549,7 @@ mark.search-mark-active {
     const inputEl = document.getElementById('input');
     const inputAreaEl = document.getElementById('input-area');
     const inputCompositeEl = document.getElementById('inputComposite');
+    const inputCompositeShellEl = inputCompositeEl ? inputCompositeEl.closest('.input-composite-shell') : null;
     const inputResizeHandle = document.getElementById('inputResizeHandle');
     const sendBtn = document.getElementById('sendBtn');
     const tokenUsageRing = document.getElementById('tokenUsageRing');
@@ -2102,6 +2573,7 @@ mark.search-mark-active {
     const multiSelectDeleteBtn = document.getElementById('multiSelectDeleteBtn');
     const multiSelectCopyBtn = document.getElementById('multiSelectCopyBtn');
     const multiSelectExportBtn = document.getElementById('multiSelectExportBtn');
+    const multiSelectAttachConfirmBtn = document.getElementById('multiSelectAttachConfirmBtn');
     const multiSelectExitBtn = document.getElementById('multiSelectExitBtn');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
@@ -2110,6 +2582,7 @@ mark.search-mark-active {
     let lastActiveSessionId = '';
     let sessionMsgCounter = 0;
     let multiSelectMode = false;
+    let multiSelectPurpose = 'normal';
     let sessionRenderJobId = 0;
     const SESSION_RENDER_BANNER_ID = 'sessionRenderBanner';
     const RESTORE_BATCH_SIZE = 30;
@@ -2145,6 +2618,47 @@ mark.search-mark-active {
         placeholder.appendChild(hint);
     }
 
+    function buildFaqAccordion(container) {
+        if (!container || container.querySelector('.faq-list')) {
+            return;
+        }
+        const nodes = Array.from(container.childNodes);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'faq-list';
+        let i = 0;
+        while (i < nodes.length) {
+            const node = nodes[i];
+            if (node.nodeType === 1 && node.tagName === 'H3') {
+                const details = document.createElement('details');
+                details.className = 'faq-item';
+                if (wrapper.childElementCount === 0) {
+                    details.open = true;
+                }
+                const summary = document.createElement('summary');
+                summary.className = 'faq-summary';
+                summary.textContent = node.textContent;
+                const body = document.createElement('div');
+                body.className = 'faq-body';
+                i += 1;
+                while (i < nodes.length && !(nodes[i].nodeType === 1 && nodes[i].tagName === 'H3')) {
+                    body.appendChild(nodes[i]);
+                    i += 1;
+                }
+                details.appendChild(summary);
+                details.appendChild(body);
+                wrapper.appendChild(details);
+            } else if (node.nodeType === 3 && !node.textContent.trim()) {
+                i += 1;
+            } else {
+                i += 1;
+            }
+        }
+        if (wrapper.childElementCount > 0) {
+            container.textContent = '';
+            container.appendChild(wrapper);
+        }
+    }
+
     function applyLocale() {
         const toolbarStatus = document.getElementById('toolbarStatus');
         const retryBtnEl = document.getElementById('retryBtn');
@@ -2163,6 +2677,28 @@ mark.search-mark-active {
         if (modelBtnEl) modelBtnEl.title = locale.switchModel;
         const modelsHeader = document.getElementById('modelsHeader');
         if (modelsHeader) modelsHeader.textContent = locale.models;
+        updateModelButtonDisplay(lastModelPayload);
+        if (contextAttachHeaderLead) contextAttachHeaderLead.textContent = locale.contextAttachHeaderLead || '';
+        if (contextAttachHeaderRest) contextAttachHeaderRest.textContent = locale.contextAttachHeaderRest || '';
+        if (contextAttachHelp) {
+            const tip = locale.contextAttachTooltip || '';
+            contextAttachHelp.title = tip;
+            contextAttachHelp.setAttribute('aria-label', tip);
+        }
+        if (contextAttachTooltipEl) {
+            contextAttachTooltipEl.textContent = locale.contextAttachTooltip || '';
+        }
+        const contextAttachSendTitle = document.getElementById('contextAttachSendModalTitle');
+        const contextAttachSendBody = document.getElementById('contextAttachSendModalBody');
+        const contextAttachSendYesBtn = document.getElementById('contextAttachSendYesBtn');
+        const contextAttachSendNoBtn = document.getElementById('contextAttachSendNoBtn');
+        if (contextAttachSendTitle) contextAttachSendTitle.textContent = locale.contextAttachCustom || '';
+        if (contextAttachSendBody) contextAttachSendBody.textContent = locale.contextAttachSendPrompt || '';
+        if (contextAttachSendYesBtn) contextAttachSendYesBtn.textContent = locale.contextAttachSendYes || '';
+        if (contextAttachSendNoBtn) contextAttachSendNoBtn.textContent = locale.contextAttachSendNo || '';
+        if (multiSelectAttachConfirmBtn) multiSelectAttachConfirmBtn.textContent = locale.contextAttachConfirm || '';
+        updateContextAttachButtonLabel();
+        renderContextAttachOptions();
         const newChatLabelFull = document.getElementById('newChatLabelFull');
         if (newChatLabelFull) newChatLabelFull.textContent = locale.newChatBtn;
         if (newChatBtn) newChatBtn.title = locale.newChatBtn;
@@ -2232,6 +2768,13 @@ mark.search-mark-active {
         if (helpModalTitle) helpModalTitle.textContent = locale.helpTitle;
         const helpModalBody = document.getElementById('helpModalBody');
         if (helpModalBody) helpModalBody.innerHTML = locale.helpHtml;
+        const faqModalTitle = document.getElementById('faqModalTitle');
+        if (faqModalTitle) faqModalTitle.textContent = locale.faqTitle;
+        const faqModalBody = document.getElementById('faqModalBody');
+        if (faqModalBody) {
+            faqModalBody.innerHTML = locale.faqHtml || '';
+            buildFaqAccordion(faqModalBody);
+        }
         if (statusText) statusText.textContent = locale.statusDisconnected;
         pendingPermissions.forEach(function(group) {
             const labelEl = group.querySelector('.permission-label');
@@ -2259,21 +2802,39 @@ mark.search-mark-active {
     const INPUT_HEIGHT_MIN = 36;
     const INPUT_HEIGHT_DEFAULT = 120;
 
+    function getChatRegionHeight() {
+        const chatH = chatBodyEl ? chatBodyEl.clientHeight : 0;
+        const inputH = inputAreaEl ? inputAreaEl.clientHeight : 0;
+        const region = chatH + inputH;
+        if (region > 0) {
+            return region;
+        }
+        return Math.max(window.innerHeight - 120, INPUT_HEIGHT_MIN);
+    }
+
     function getInputHeightCeiling() {
-        return Math.max(INPUT_HEIGHT_MIN, Math.min(Math.floor(window.innerHeight * 0.55), 480));
+        return Math.max(INPUT_HEIGHT_MIN, Math.floor(getChatRegionHeight() * 0.6));
     }
 
     function getInputMaxHeight() {
         const raw = getComputedStyle(inputAreaEl).getPropertyValue('--input-max-height').trim();
         const v = parseInt(raw, 10);
-        if (!isNaN(v) && v >= INPUT_HEIGHT_MIN) return v;
+        if (!isNaN(v) && v >= INPUT_HEIGHT_MIN) {
+            return v;
+        }
         return INPUT_HEIGHT_DEFAULT;
     }
 
+    function getEffectiveInputMaxHeight() {
+        return Math.min(getInputMaxHeight(), getInputHeightCeiling());
+    }
+
     function syncInputHeightFromContent() {
-        const max = getInputMaxHeight();
+        const max = getEffectiveInputMaxHeight();
         inputEl.style.height = 'auto';
-        inputEl.style.height = Math.min(inputEl.scrollHeight, max) + 'px';
+        const next = Math.min(inputEl.scrollHeight, max);
+        inputEl.style.height = next + 'px';
+        inputEl.style.overflowY = inputEl.scrollHeight > max ? 'auto' : 'hidden';
     }
 
     function setInputMaxHeight(px, options) {
@@ -2335,10 +2896,735 @@ mark.search-mark-active {
         inputResizeHandle.addEventListener('pointercancel', endDrag);
     })();
 
+    window.addEventListener('resize', syncInputHeightFromContent);
+    window.addEventListener('scroll', function(e) {
+        hideContextAttachTooltip();
+        if (contextAttachPreviewOpen && isInsideContextAttachPreview(e.target)) {
+            return;
+        }
+        hideContextAttachPreview();
+    }, true);
+
     let streamingMessageId = null;
     let thoughtMsgId = null;
     let canSend = false;
     let isPrompting = false;
+    let pendingSwitchSessionId = null;
+    let contextAttachVisible = false;
+    let contextAttachMode = 'none';
+    let contextAttachCustomIndices = [];
+    let contextAttachCustomPending = false;
+    let contextAttachCustomConfirmed = false;
+    let contextAttachUnconfirmedIndices = [];
+    let contextAttachPreviewOpen = false;
+    let contextAttachPickerHiding = false;
+    let contextAttachHasChoice = false;
+    let pendingSendText = '';
+    function maybeFocusInputAfterResponse() {
+        if (!canSend || inputEl.disabled) {
+            return;
+        }
+        if (!document.hasFocus()) {
+            return;
+        }
+        requestAnimationFrame(function() {
+            if (canSend && !inputEl.disabled && document.hasFocus()) {
+                inputEl.focus();
+            }
+        });
+    }
+
+    function resetContextAttachPickerElement() {
+        if (contextAttachPicker) {
+            contextAttachPicker.hidden = true;
+            contextAttachPicker.classList.remove('is-hiding', 'is-entering', 'is-attention');
+        }
+        contextAttachPickerHiding = false;
+    }
+
+    function forceHideContextAttachPicker() {
+        contextAttachVisible = false;
+        contextAttachMode = 'none';
+        contextAttachCustomIndices = [];
+        contextAttachCustomPending = false;
+        contextAttachCustomConfirmed = false;
+        contextAttachUnconfirmedIndices = [];
+        contextAttachHasChoice = false;
+        pendingSendText = '';
+        if (multiSelectPurpose === 'contextAttach') {
+            exitMultiSelectMode();
+        }
+        resetContextAttachPickerElement();
+        closeAllDropdowns();
+    }
+
+    function finishHideContextAttachPicker() {
+        contextAttachVisible = false;
+        contextAttachMode = 'none';
+        contextAttachCustomIndices = [];
+        contextAttachCustomPending = false;
+        contextAttachCustomConfirmed = false;
+        contextAttachUnconfirmedIndices = [];
+        contextAttachHasChoice = false;
+        pendingSendText = '';
+        if (multiSelectPurpose === 'contextAttach') {
+            exitMultiSelectMode();
+        }
+        resetContextAttachPickerElement();
+        closeAllDropdowns();
+    }
+
+    function hideContextAttachPicker() {
+        if (!contextAttachVisible && !contextAttachPickerHiding) {
+            return;
+        }
+        if (contextAttachPickerHiding) {
+            return;
+        }
+        if (!contextAttachPicker || contextAttachPicker.hidden) {
+            finishHideContextAttachPicker();
+            return;
+        }
+        contextAttachPickerHiding = true;
+        contextAttachPicker.classList.remove('is-entering', 'is-attention');
+        contextAttachPicker.classList.add('is-hiding');
+        hideContextAttachPreview();
+        const onExitEnd = function(e) {
+            if (e.target !== contextAttachPicker || e.animationName !== 'context-attach-exit') {
+                return;
+            }
+            contextAttachPicker.removeEventListener('animationend', onExitEnd);
+            finishHideContextAttachPicker();
+        };
+        contextAttachPicker.addEventListener('animationend', onExitEnd);
+    }
+
+    function positionContextAttachTooltip() {
+        if (!contextAttachHelp || !contextAttachTooltipEl || contextAttachTooltipEl.hidden) {
+            return;
+        }
+        const rect = contextAttachHelp.getBoundingClientRect();
+        const tipRect = contextAttachTooltipEl.getBoundingClientRect();
+        let left = rect.left + rect.width / 2 - tipRect.width / 2;
+        let top = rect.top - tipRect.height - 10;
+        left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+        if (top < 8) {
+            top = rect.bottom + 10;
+        }
+        contextAttachTooltipEl.style.left = left + 'px';
+        contextAttachTooltipEl.style.top = top + 'px';
+    }
+
+    function showContextAttachTooltip() {
+        if (!contextAttachHelp || !contextAttachTooltipEl) {
+            return;
+        }
+        contextAttachTooltipEl.textContent = locale.contextAttachTooltip || contextAttachHelp.getAttribute('aria-label') || '';
+        contextAttachTooltipEl.hidden = false;
+        contextAttachTooltipEl.style.left = '-9999px';
+        contextAttachTooltipEl.style.top = '0';
+        requestAnimationFrame(function() {
+            positionContextAttachTooltip();
+        });
+    }
+
+    function hideContextAttachTooltip() {
+        if (contextAttachTooltipEl) {
+            contextAttachTooltipEl.hidden = true;
+        }
+    }
+
+    function bindContextAttachTooltip() {
+        if (!contextAttachHelp) {
+            return;
+        }
+        contextAttachHelp.addEventListener('mouseenter', showContextAttachTooltip);
+        contextAttachHelp.addEventListener('mouseleave', hideContextAttachTooltip);
+        contextAttachHelp.addEventListener('focus', showContextAttachTooltip);
+        contextAttachHelp.addEventListener('blur', hideContextAttachTooltip);
+    }
+
+    function getContextAttachRegionGroups() {
+        const divider = document.getElementById(LOCAL_HISTORY_DIVIDER_ID);
+        const groups = [];
+        messagesEl.querySelectorAll('.message-group').forEach(function(group) {
+            if (divider && !(group.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                return;
+            }
+            groups.push(group);
+        });
+        return groups;
+    }
+
+    function ensureGroupSelectableForContextAttach(group) {
+        if (!isAttachableMemoryGroup(group)) {
+            return;
+        }
+        if (group.classList.contains('selectable')) {
+            return;
+        }
+        group.classList.add('selectable', 'context-attach-extra-selectable');
+        const selectWrap = document.createElement('label');
+        selectWrap.className = 'msg-select-wrap';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        checkbox.addEventListener('change', function() {
+            setGroupSelected(group, checkbox.checked);
+        });
+        selectWrap.appendChild(checkbox);
+        group.insertBefore(selectWrap, group.firstChild);
+        wireSelectableGroup(group);
+    }
+
+    function ensureContextAttachSelectableTargets() {
+        getContextAttachRegionGroups().forEach(ensureGroupSelectableForContextAttach);
+    }
+
+    function clearContextAttachSelectableTargets() {
+        messagesEl.querySelectorAll('.message-group.context-attach-extra-selectable').forEach(function(group) {
+            group.classList.remove('selectable', 'context-attach-extra-selectable', 'is-selected');
+            const wrap = group.querySelector('.msg-select-wrap');
+            if (wrap) {
+                wrap.remove();
+            }
+            if (group.dataset.contextAttachReveal === '1') {
+                group.style.display = 'none';
+                delete group.dataset.contextAttachReveal;
+            }
+        });
+    }
+
+    function getExistingCustomAttachIndices() {
+        if (contextAttachCustomIndices.length > 0) {
+            return contextAttachCustomIndices.slice();
+        }
+        if (contextAttachUnconfirmedIndices.length > 0) {
+            return contextAttachUnconfirmedIndices.slice();
+        }
+        return [];
+    }
+
+    function applyContextAttachIndicesToSelection(indices) {
+        if (!indices.length) {
+            return;
+        }
+        const indexSet = new Set(indices);
+        const updates = [];
+        getContextAttachRegionGroups().forEach(function(group) {
+            const idx = parseInt(group.dataset.sessionIndex || '', 10);
+            updates.push({
+                group: group,
+                selected: Number.isInteger(idx) && indexSet.has(idx),
+            });
+        });
+        setGroupsSelected(updates);
+    }
+
+    function getCustomContextAttachSelectionCount() {
+        if (contextAttachCustomConfirmed) {
+            return contextAttachCustomIndices.length;
+        }
+        if (multiSelectMode && multiSelectPurpose === 'contextAttach') {
+            return getSelectedMessageIndices().length;
+        }
+        if (contextAttachCustomPending || contextAttachUnconfirmedIndices.length > 0) {
+            return getUnconfirmedCustomSelectionIndices().length;
+        }
+        return 0;
+    }
+
+    function getContextAttachCountLabel(count) {
+        return (locale.contextAttachSelected || '附带上轮已选{0}条记忆').replace('{0}', String(count));
+    }
+
+    function getContextAttachOptionLabel(mode) {
+        switch (mode) {
+            case 'last2':
+                return locale.contextAttachLast2;
+            case 'last10':
+                return locale.contextAttachLast10;
+            case 'all':
+                return locale.contextAttachAll;
+            case 'custom': {
+                const count = getCustomContextAttachSelectionCount();
+                if (count > 0) {
+                    return getContextAttachCountLabel(count);
+                }
+                if (contextAttachCustomPending || contextAttachCustomConfirmed || contextAttachHasChoice) {
+                    return locale.contextAttachCustomNone || '您没有选择任何记忆';
+                }
+                return locale.contextAttachCustom;
+            }
+            case 'none':
+            default:
+                if (contextAttachHasChoice) {
+                    return locale.contextAttachNone;
+                }
+                return locale.contextAttachPlaceholder || locale.contextAttachNone;
+        }
+    }
+
+    function updateContextAttachButtonLabel() {
+        if (!contextAttachLabel || !contextAttachBtn) {
+            return;
+        }
+        const isPlaceholder = contextAttachMode === 'none' && !contextAttachHasChoice;
+        contextAttachLabel.textContent = getContextAttachOptionLabel(contextAttachMode);
+        contextAttachBtn.classList.toggle('is-placeholder', isPlaceholder);
+        contextAttachBtn.title = isPlaceholder
+            ? (locale.contextAttachPlaceholder || '')
+            : getContextAttachOptionLabel(contextAttachMode);
+        if (contextAttachPreviewOpen) {
+            if (hasContextAttachSelection()) {
+                renderContextAttachPreviewContent();
+                requestAnimationFrame(function() {
+                    positionContextAttachPreview();
+                });
+            } else {
+                hideContextAttachPreview();
+            }
+        }
+    }
+
+    function getGroupPreviewRoleLabel(group) {
+        if (group.classList.contains('permission')) {
+            return locale.permissionTitle || 'Permission';
+        }
+        if (group.classList.contains('thought')) {
+            return locale.roleThought || 'Thought';
+        }
+        if (group.classList.contains('tool')) {
+            return locale.roleTool || 'Tool';
+        }
+        return getGroupRoleLabel(group);
+    }
+
+    function getGroupPreviewText(group) {
+        if (group.classList.contains('permission') && group._permissionState && group._permissionState.text) {
+            return group._permissionState.text.trim();
+        }
+        if (group._auxState && group._auxState.rawText) {
+            return group._auxState.rawText.trim();
+        }
+        return getMessagePlainText(group).trim();
+    }
+
+    function isAttachableMemoryGroup(group) {
+        return group.classList.contains('user')
+            || group.classList.contains('assistant')
+            || group.classList.contains('permission');
+    }
+
+    function getAttachableMemoryGroups() {
+        return getContextAttachRegionGroups().filter(isAttachableMemoryGroup);
+    }
+
+    function resolveAttachPreviewGroups() {
+        if (!contextAttachVisible || contextAttachMode === 'none') {
+            return [];
+        }
+        const attachable = getAttachableMemoryGroups();
+        if (contextAttachMode === 'last2') {
+            return attachable.slice(-2);
+        }
+        if (contextAttachMode === 'last10') {
+            return attachable.slice(-10);
+        }
+        if (contextAttachMode === 'all') {
+            return attachable.slice();
+        }
+        if (contextAttachMode === 'custom') {
+            let indices = [];
+            if (contextAttachCustomConfirmed) {
+                indices = contextAttachCustomIndices;
+            } else if (multiSelectMode && multiSelectPurpose === 'contextAttach') {
+                indices = getSelectedMessageIndices();
+            } else {
+                indices = contextAttachUnconfirmedIndices;
+            }
+            if (!indices.length) {
+                return [];
+            }
+            const byIndex = new Map();
+            messagesEl.querySelectorAll('.message-group').forEach(function(group) {
+                const idx = parseInt(group.dataset.sessionIndex || '', 10);
+                if (Number.isInteger(idx)) {
+                    byIndex.set(idx, group);
+                }
+            });
+            const picked = [];
+            indices.forEach(function(index) {
+                const group = byIndex.get(index);
+                if (group && isAttachableMemoryGroup(group) && picked.indexOf(group) === -1) {
+                    picked.push(group);
+                }
+            });
+            return picked;
+        }
+        return [];
+    }
+
+    function hasContextAttachSelection() {
+        return resolveAttachPreviewGroups().length > 0;
+    }
+
+    function isInsideContextAttachPreview(node) {
+        if (!node || !contextAttachPreviewEl) {
+            return false;
+        }
+        return contextAttachPreviewEl === node || contextAttachPreviewEl.contains(node);
+    }
+
+    function estimateContextAttachInputTokens(groups) {
+        const parts = [(locale.contextAttachPrefixHeader || ''), '---'];
+        groups.forEach(function(group) {
+            parts.push(getGroupPreviewRoleLabel(group));
+            parts.push(getGroupPreviewText(group));
+        });
+        const text = parts.join('\n');
+        let weight = 0;
+        for (let i = 0; i < text.length; i++) {
+            weight += text.charCodeAt(i) > 0x2E7F ? 0.55 : 0.25;
+        }
+        return Math.max(1, Math.ceil(weight));
+    }
+
+    function updateContextAttachPreviewTitle(count, tokens) {
+        const titleEl = document.getElementById('contextAttachPreviewTitle');
+        if (!titleEl) {
+            return;
+        }
+        const template = locale.contextAttachPreviewTitle || '({0} / ~{1})';
+        titleEl.textContent = template
+            .replace('{0}', String(count))
+            .replace('{1}', String(tokens));
+    }
+
+    function renderContextAttachPreviewContent() {
+        if (!contextAttachPreviewList) {
+            return;
+        }
+        const groups = resolveAttachPreviewGroups();
+        if (!groups.length) {
+            contextAttachPreviewList.innerHTML = '';
+            updateContextAttachPreviewTitle(0, 0);
+            return;
+        }
+        updateContextAttachPreviewTitle(groups.length, estimateContextAttachInputTokens(groups));
+        contextAttachPreviewList.innerHTML = groups.map(function(group) {
+            const role = escapeHtml(getGroupPreviewRoleLabel(group));
+            const text = escapeHtml(getGroupPreviewText(group) || '—');
+            return '<li class="context-attach-preview-item">' +
+                '<span class="context-attach-preview-role">' + role + '</span>' +
+                '<span class="context-attach-preview-text">' + text + '</span>' +
+                '</li>';
+        }).join('');
+    }
+
+    function positionContextAttachPreview() {
+        if (!contextAttachBtn || !contextAttachPreviewEl || contextAttachPreviewEl.hidden) {
+            return;
+        }
+        const rect = contextAttachBtn.getBoundingClientRect();
+        const tipRect = contextAttachPreviewEl.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.top - tipRect.height - 10;
+        left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+        if (top < 8) {
+            top = rect.bottom + 10;
+        }
+        contextAttachPreviewEl.style.left = left + 'px';
+        contextAttachPreviewEl.style.top = top + 'px';
+    }
+
+    function showContextAttachPreview() {
+        if (!contextAttachVisible || !contextAttachBtn || !contextAttachPreviewEl) {
+            return;
+        }
+        if (contextAttachPicker && contextAttachPicker.classList.contains('is-open')) {
+            return;
+        }
+        if (!hasContextAttachSelection()) {
+            return;
+        }
+        renderContextAttachPreviewContent();
+        contextAttachPreviewOpen = true;
+        contextAttachPreviewEl.hidden = false;
+        contextAttachPreviewEl.style.left = '-9999px';
+        contextAttachPreviewEl.style.top = '0';
+        requestAnimationFrame(function() {
+            positionContextAttachPreview();
+        });
+    }
+
+    function hideContextAttachPreview() {
+        contextAttachPreviewOpen = false;
+        if (contextAttachPreviewEl) {
+            contextAttachPreviewEl.hidden = true;
+        }
+    }
+
+    function bindContextAttachPreview() {
+        if (!contextAttachBtn || !contextAttachPreviewEl) {
+            return;
+        }
+        contextAttachBtn.addEventListener('mouseenter', function() {
+            showContextAttachPreview();
+        });
+        contextAttachBtn.addEventListener('mousedown', function() {
+            hideContextAttachPreview();
+        });
+        const contextAttachPreviewClose = document.getElementById('contextAttachPreviewClose');
+        if (contextAttachPreviewClose) {
+            contextAttachPreviewClose.addEventListener('click', function(e) {
+                e.stopPropagation();
+                hideContextAttachPreview();
+            });
+        }
+        document.addEventListener('pointerdown', function(e) {
+            if (!contextAttachPreviewOpen) {
+                return;
+            }
+            if (isInsideContextAttachPreview(e.target)) {
+                return;
+            }
+            hideContextAttachPreview();
+        }, true);
+    }
+
+    function renderContextAttachOptions() {
+        if (!contextAttachList) {
+            return;
+        }
+        const options = [
+            { mode: 'none', label: locale.contextAttachNone },
+            { mode: 'last2', label: locale.contextAttachLast2 },
+            { mode: 'last10', label: locale.contextAttachLast10 },
+            { mode: 'all', label: locale.contextAttachAll },
+            { mode: 'custom', label: locale.contextAttachCustom },
+        ];
+        contextAttachList.innerHTML = options.map(function(opt) {
+            const isActive = opt.mode === contextAttachMode
+                && (opt.mode !== 'none' || contextAttachHasChoice);
+            const active = isActive ? ' active' : '';
+            return '<div class="dropdown-item' + active + '" data-attach-mode="' + escapeHtml(opt.mode) + '">' +
+                escapeHtml(opt.label) + (isActive ? ' ✓' : '') + '</div>';
+        }).join('');
+        contextAttachList.querySelectorAll('.dropdown-item[data-attach-mode]').forEach(function(item) {
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const mode = this.dataset.attachMode;
+                if (mode === 'custom') {
+                    contextAttachHasChoice = true;
+                    enterContextAttachSelectMode();
+                    return;
+                }
+                if (multiSelectPurpose === 'contextAttach') {
+                    exitMultiSelectMode();
+                }
+                contextAttachCustomPending = false;
+                contextAttachCustomConfirmed = false;
+                contextAttachUnconfirmedIndices = [];
+                contextAttachHasChoice = true;
+                contextAttachMode = mode;
+                contextAttachCustomIndices = [];
+                updateContextAttachButtonLabel();
+                renderContextAttachOptions();
+                hideContextAttachPreview();
+                closeAllDropdowns();
+            });
+        });
+    }
+
+    function showContextAttachPicker() {
+        contextAttachVisible = true;
+        contextAttachMode = 'none';
+        contextAttachCustomIndices = [];
+        contextAttachCustomPending = false;
+        contextAttachCustomConfirmed = false;
+        contextAttachUnconfirmedIndices = [];
+        contextAttachHasChoice = false;
+        hideContextAttachPreview();
+        if (contextAttachPicker) {
+            contextAttachPicker.classList.remove('is-hiding', 'is-entering', 'is-attention');
+            contextAttachPicker.hidden = false;
+            contextAttachPicker.classList.add('is-entering', 'is-attention');
+            const onPickerAnimEnd = function(e) {
+                if (e.target !== contextAttachPicker || e.animationName !== 'context-attach-enter') {
+                    return;
+                }
+                contextAttachPicker.classList.remove('is-entering');
+                contextAttachPicker.removeEventListener('animationend', onPickerAnimEnd);
+            };
+            contextAttachPicker.addEventListener('animationend', onPickerAnimEnd);
+            if (contextAttachBtn) {
+                const onAttentionEnd = function(e) {
+                    if (e.target !== contextAttachBtn || e.animationName !== 'context-attach-attention-pulse') {
+                        return;
+                    }
+                    contextAttachPicker.classList.remove('is-attention');
+                    contextAttachBtn.removeEventListener('animationend', onAttentionEnd);
+                };
+                contextAttachBtn.addEventListener('animationend', onAttentionEnd);
+            }
+        }
+        contextAttachPickerHiding = false;
+        updateContextAttachButtonLabel();
+        renderContextAttachOptions();
+    }
+
+    function enterContextAttachSelectMode() {
+        const previousIndices = getExistingCustomAttachIndices();
+        contextAttachCustomPending = true;
+        contextAttachCustomConfirmed = false;
+        contextAttachUnconfirmedIndices = previousIndices.slice();
+        contextAttachMode = 'custom';
+        closeAllDropdowns();
+        ensureContextAttachSelectableTargets();
+        enterMultiSelectMode(null, 'contextAttach');
+        applyContextAttachIndicesToSelection(previousIndices);
+        updateContextAttachButtonLabel();
+    }
+
+    function confirmContextAttachSelection() {
+        const indices = getSelectedMessageIndices();
+        if (!indices.length) {
+            return;
+        }
+        contextAttachCustomIndices = indices.slice();
+        contextAttachUnconfirmedIndices = [];
+        contextAttachMode = 'custom';
+        contextAttachCustomConfirmed = true;
+        contextAttachCustomPending = false;
+        contextAttachHasChoice = true;
+        exitMultiSelectMode();
+        updateContextAttachButtonLabel();
+        renderContextAttachOptions();
+    }
+
+    function getUnconfirmedCustomSelectionIndices() {
+        if (multiSelectMode && multiSelectPurpose === 'contextAttach') {
+            return getSelectedMessageIndices();
+        }
+        return contextAttachUnconfirmedIndices.slice();
+    }
+
+    function hasUnconfirmedCustomMemorySelection() {
+        if (!contextAttachVisible || contextAttachCustomConfirmed) {
+            return false;
+        }
+        if (contextAttachMode !== 'custom' && !contextAttachCustomPending) {
+            return false;
+        }
+        return getUnconfirmedCustomSelectionIndices().length > 0;
+    }
+
+    function buildContextAttachPayload(forceNoAttach) {
+        if (!contextAttachVisible) {
+            return undefined;
+        }
+        if (forceNoAttach) {
+            return { mode: 'none' };
+        }
+        if (contextAttachCustomConfirmed && contextAttachMode === 'custom') {
+            return {
+                mode: 'custom',
+                indices: contextAttachCustomIndices.slice(),
+            };
+        }
+        if (contextAttachMode === 'none') {
+            return { mode: 'none' };
+        }
+        if (contextAttachMode === 'custom' && !contextAttachCustomConfirmed) {
+            return { mode: 'none' };
+        }
+        return {
+            mode: contextAttachMode,
+            indices: undefined,
+        };
+    }
+
+    function finalizeContextAttachSelectionFromPending() {
+        const indices = getUnconfirmedCustomSelectionIndices();
+        if (!indices.length) {
+            return false;
+        }
+        contextAttachCustomIndices = indices.slice();
+        contextAttachUnconfirmedIndices = [];
+        contextAttachMode = 'custom';
+        contextAttachCustomConfirmed = true;
+        contextAttachCustomPending = false;
+        contextAttachHasChoice = true;
+        if (multiSelectMode && multiSelectPurpose === 'contextAttach') {
+            exitMultiSelectMode();
+        }
+        updateContextAttachButtonLabel();
+        renderContextAttachOptions();
+        return true;
+    }
+
+    function openContextAttachSendModal(text) {
+        pendingSendText = text;
+        showModal(contextAttachSendModal);
+    }
+
+    function closeContextAttachSendModal() {
+        pendingSendText = '';
+        hideModal(contextAttachSendModal);
+    }
+
+    function executeSendMessage(text, attachOverride) {
+        hideFilePicker();
+        resetAutoScrollFollow();
+        addMessage('user', text);
+        inputEl.value = '';
+        syncInputHeightFromContent();
+        updateQuickActionBtns();
+        inputEl.disabled = true;
+        awaitingFirstChunk = true;
+        setInputMode('waiting');
+
+        const payload = attachOverride !== undefined
+            ? attachOverride
+            : buildContextAttachPayload(false);
+        vscode.postMessage({
+            type: 'sendMessage',
+            text: text,
+            contextAttach: payload,
+        });
+    }
+
+    function openSwitchSessionModal(sessionId) {
+        pendingSwitchSessionId = sessionId;
+        const titleEl = document.getElementById('switchSessionModalTitle');
+        const bodyEl = document.getElementById('switchSessionModalBody');
+        const stayBtn = document.getElementById('switchSessionStayBtn');
+        const confirmBtn = document.getElementById('switchSessionConfirmBtn');
+        if (titleEl) titleEl.textContent = locale.switchSessionPromptTitle || '';
+        if (bodyEl) bodyEl.textContent = locale.switchSessionPromptBody || '';
+        if (stayBtn) stayBtn.textContent = locale.switchSessionStay || '';
+        if (confirmBtn) confirmBtn.textContent = locale.switchSessionConfirm || '';
+        showModal(switchSessionModal);
+    }
+
+    function closeSwitchSessionModal() {
+        pendingSwitchSessionId = null;
+        hideModal(switchSessionModal);
+    }
+
+    function requestSwitchSession(sessionId) {
+        if (!sessionId || sessionId === activeSessionId) {
+            return;
+        }
+        if (isPrompting) {
+            openSwitchSessionModal(sessionId);
+            return;
+        }
+        vscode.postMessage({ type: 'switchSession', sessionId: sessionId });
+    }
     /** True after send until first agent output; stop stays hidden to avoid early cancel. */
     let awaitingFirstChunk = false;
     window._showThoughts = true;
@@ -2964,8 +4250,12 @@ mark.search-mark-active {
     const previewRequests = new Map();
 
     function setInputMode(mode) {
+        const waiting = mode === 'stop' || mode === 'waiting';
         if (inputCompositeEl) {
-            inputCompositeEl.classList.toggle('waiting', mode === 'stop' || mode === 'waiting');
+            inputCompositeEl.classList.toggle('waiting', waiting);
+        }
+        if (inputCompositeShellEl) {
+            inputCompositeShellEl.classList.toggle('waiting', waiting);
         }
         if (mode === 'stop') {
             sendBtn.classList.add('hidden');
@@ -3419,9 +4709,26 @@ mark.search-mark-active {
         return role === 'user' || role === 'assistant' || role === 'thought' || role === 'tool';
     }
 
+    function isGroupInContextAttachRegion(group) {
+        const divider = document.getElementById(LOCAL_HISTORY_DIVIDER_ID);
+        if (!divider) {
+            return true;
+        }
+        return !!(group.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+
     function getSelectableGroups() {
         return Array.from(messagesEl.querySelectorAll('.message-group.selectable')).filter(function(group) {
-            return group.style.display !== 'none';
+            if (group.style.display === 'none') {
+                return false;
+            }
+            if (multiSelectPurpose === 'contextAttach' && !isGroupInContextAttachRegion(group)) {
+                return false;
+            }
+            if (multiSelectPurpose === 'contextAttach' && !isAttachableMemoryGroup(group)) {
+                return false;
+            }
+            return true;
         });
     }
 
@@ -3442,6 +4749,21 @@ mark.search-mark-active {
         updateMultiSelectToolbar();
     }
 
+    function setGroupsSelected(updates) {
+        updates.forEach(function(entry) {
+            entry.group.classList.toggle('is-selected', entry.selected);
+            const checkbox = getGroupCheckbox(entry.group);
+            if (checkbox) checkbox.checked = entry.selected;
+        });
+        updateMultiSelectToolbar();
+    }
+
+    function areAllSelectableGroupsSelected(groups) {
+        return groups.length > 0 && groups.every(function(group) {
+            return group.classList.contains('is-selected');
+        });
+    }
+
     function toggleGroupSelection(group) {
         setGroupSelected(group, !group.classList.contains('is-selected'));
     }
@@ -3449,6 +4771,7 @@ mark.search-mark-active {
     function updateMultiSelectToolbar() {
         const selected = getSelectedGroups();
         const count = selected.length;
+        const isAttachMode = multiSelectPurpose === 'contextAttach';
         if (multiSelectCount) {
             multiSelectCount.textContent = count > 0
                 ? (locale.multiSelectCount || '{0} selected').replace('{0}', String(count))
@@ -3458,11 +4781,29 @@ mark.search-mark-active {
         if (multiSelectDeleteBtn) multiSelectDeleteBtn.disabled = !hasSelection;
         if (multiSelectCopyBtn) multiSelectCopyBtn.disabled = !hasSelection;
         if (multiSelectExportBtn) multiSelectExportBtn.disabled = !hasSelection;
+        if (multiSelectAttachConfirmBtn) {
+            multiSelectAttachConfirmBtn.hidden = !isAttachMode;
+            multiSelectAttachConfirmBtn.disabled = !hasSelection;
+        }
+        const selectableGroups = getSelectableGroups();
+        if (multiSelectAllBtn) {
+            multiSelectAllBtn.textContent = areAllSelectableGroupsSelected(selectableGroups)
+                ? (locale.multiSelectDeselectAll || '取消全选')
+                : (locale.multiSelectAll || '全选');
+        }
+        if (isAttachMode) {
+            updateContextAttachButtonLabel();
+        }
+        hideContextAttachPreview();
     }
 
-    function enterMultiSelectMode(initialGroup) {
+    function enterMultiSelectMode(initialGroup, purpose) {
+        multiSelectPurpose = purpose || 'normal';
         if (multiSelectMode) {
-            if (initialGroup) setGroupSelected(initialGroup, true);
+            if (initialGroup) {
+                setGroupSelected(initialGroup, true);
+            }
+            updateMultiSelectToolbar();
             return;
         }
         multiSelectMode = true;
@@ -3471,22 +4812,42 @@ mark.search-mark-active {
             multiSelectToolbar.hidden = false;
             multiSelectToolbar.classList.add('visible');
         }
-        if (initialGroup) setGroupSelected(initialGroup, true);
-        else updateMultiSelectToolbar();
+        if (initialGroup) {
+            setGroupSelected(initialGroup, true);
+        } else {
+            updateMultiSelectToolbar();
+        }
     }
 
     function exitMultiSelectMode() {
-        if (!multiSelectMode) return;
+        if (!multiSelectMode) {
+            return;
+        }
+        const wasAttachMode = multiSelectPurpose === 'contextAttach';
+        if (wasAttachMode && contextAttachCustomPending && !contextAttachCustomConfirmed) {
+            const indices = getSelectedMessageIndices();
+            if (indices.length > 0) {
+                contextAttachUnconfirmedIndices = indices.slice();
+                contextAttachMode = 'custom';
+            } else {
+                contextAttachMode = 'none';
+                contextAttachCustomPending = false;
+                contextAttachUnconfirmedIndices = [];
+            }
+        }
         multiSelectMode = false;
+        multiSelectPurpose = 'normal';
         messagesEl.classList.remove('multi-select-active');
         getSelectableGroups().forEach(function(group) {
             setGroupSelected(group, false);
         });
+        clearContextAttachSelectableTargets();
         if (multiSelectToolbar) {
             multiSelectToolbar.hidden = true;
             multiSelectToolbar.classList.remove('visible');
         }
         updateMultiSelectToolbar();
+        updateContextAttachButtonLabel();
     }
 
     function wireSelectableGroup(group) {
@@ -3494,6 +4855,9 @@ mark.search-mark-active {
         group.dataset.selectWired = '1';
         group.addEventListener('click', function(e) {
             if (!multiSelectMode) return;
+            if (multiSelectPurpose === 'contextAttach' && !isGroupInContextAttachRegion(group)) {
+                return;
+            }
             if (e.target.closest('.message-actions, .block-actions, .insert-dropdown, .insert-dropdown-menu, .msg-select-wrap')) {
                 return;
             }
@@ -4311,6 +5675,7 @@ mark.search-mark-active {
         clearChatSearch();
         exitMultiSelectMode();
         removeLocalHistoryDivider();
+        forceHideContextAttachPicker();
         messagesEl.innerHTML = '<div class="placeholder" id="placeholder">' + escapeHtml(locale.readyPlaceholder) + '</div>';
         placeholder = document.getElementById('placeholder');
         streamingMessageId = null;
@@ -4378,17 +5743,12 @@ mark.search-mark-active {
         const text = inputEl.value.trim();
         if (!text || !canSend) return;
 
-        hideFilePicker();
-        resetAutoScrollFollow();
-        addMessage('user', text);
-        inputEl.value = '';
-        syncInputHeightFromContent();
-        updateQuickActionBtns();
-        inputEl.disabled = true;
-        awaitingFirstChunk = true;
-        setInputMode('waiting');
+        if (hasUnconfirmedCustomMemorySelection()) {
+            openContextAttachSendModal(text);
+            return;
+        }
 
-        vscode.postMessage({ type: 'sendMessage', text: text });
+        executeSendMessage(text);
     }
 
     // Auto-resize + @file mention
@@ -4476,10 +5836,14 @@ mark.search-mark-active {
 
     if (multiSelectAllBtn) {
         multiSelectAllBtn.addEventListener('click', function() {
-            enterMultiSelectMode();
-            getSelectableGroups().forEach(function(group) {
-                setGroupSelected(group, true);
-            });
+            if (!multiSelectMode) {
+                enterMultiSelectMode(null, multiSelectPurpose);
+            }
+            const groups = getSelectableGroups();
+            const selectAll = !areAllSelectableGroupsSelected(groups);
+            setGroupsSelected(groups.map(function(group) {
+                return { group: group, selected: selectAll };
+            }));
         });
     }
     if (multiSelectDeleteBtn) {
@@ -4504,6 +5868,14 @@ mark.search-mark-active {
     }
     if (multiSelectExitBtn) {
         multiSelectExitBtn.addEventListener('click', exitMultiSelectMode);
+    }
+    if (multiSelectAttachConfirmBtn) {
+        multiSelectAttachConfirmBtn.addEventListener('click', function() {
+            if (multiSelectAttachConfirmBtn.disabled) {
+                return;
+            }
+            confirmContextAttachSelection();
+        });
     }
 
     document.addEventListener('click', function(e) {
@@ -4551,9 +5923,11 @@ mark.search-mark-active {
         vscode.postMessage({ type: 'newChat' });
     });
 
-    // About / Help modals (opened from view title bar commands)
+    // About / Help / FAQ modals (opened from view title bar commands)
     const aboutModal = document.getElementById('aboutModal');
     const helpModal = document.getElementById('helpModal');
+    const faqModal = document.getElementById('faqModal');
+    const faqModalBody = document.getElementById('faqModalBody');
     const aboutContent = document.getElementById('aboutContent');
     let pluginInfo = {};
 
@@ -4562,7 +5936,12 @@ mark.search-mark-active {
         const version = pluginInfo.version || '—';
         const publisher = pluginInfo.publisher || '';
         const repo = pluginInfo.repository || '';
+        const iconUri = pluginInfo.iconUri || '';
+        const logoHtml = iconUri
+            ? '<div class="about-brand"><img src="' + escapeHtml(iconUri) + '" alt="' + escapeHtml(name) + '" /></div>'
+            : '';
         aboutContent.innerHTML =
+            logoHtml +
             '<h3>' + escapeHtml(name) + '</h3>' +
             '<p>' + locale.aboutVersion + ' <code>' + escapeHtml(version) + '</code>' +
             (publisher ? ' · ' + escapeHtml(publisher) : '') + '</p>' +
@@ -4585,6 +5964,7 @@ mark.search-mark-active {
     function closeInfoModals() {
         hideModal(aboutModal);
         hideModal(helpModal);
+        hideModal(faqModal);
     }
 
     document.querySelectorAll('.close-info-modal').forEach(function(btn) {
@@ -4596,6 +5976,32 @@ mark.search-mark-active {
     helpModal.addEventListener('click', function(e) {
         if (e.target === helpModal) closeInfoModals();
     });
+    faqModal.addEventListener('click', function(e) {
+        if (e.target === faqModal) closeInfoModals();
+    });
+    if (faqModalBody) {
+        faqModalBody.addEventListener('toggle', function(e) {
+            const item = e.target;
+            if (!item.classList || !item.classList.contains('faq-item') || !item.open) {
+                return;
+            }
+            const list = item.closest('.faq-list');
+            if (!list) {
+                return;
+            }
+            list.querySelectorAll('.faq-item[open]').forEach(function(other) {
+                if (other !== item) {
+                    other.open = false;
+                }
+            });
+        }, true);
+        faqModalBody.addEventListener('click', function(e) {
+            const link = e.target.closest('a[data-url]');
+            if (!link) return;
+            e.preventDefault();
+            vscode.postMessage({ type: 'openExternal', url: link.dataset.url });
+        });
+    }
 
     // Pickers
     const tabBar = document.getElementById('tab-bar');
@@ -4608,16 +6014,36 @@ mark.search-mark-active {
     const modelBtn = document.getElementById('modelBtn');
     const modelLabelEl = document.getElementById('modelLabel');
     const modelDropdown = document.getElementById('modelDropdown');
+    const contextAttachPicker = document.getElementById('contextAttachPicker');
+    const contextAttachBtn = document.getElementById('contextAttachBtn');
+    const contextAttachLabel = document.getElementById('contextAttachLabel');
+    const contextAttachDropdown = document.getElementById('contextAttachDropdown');
+    const contextAttachList = document.getElementById('contextAttachList');
+    const contextAttachHelp = document.getElementById('contextAttachHelp');
+    const contextAttachHeaderLead = document.getElementById('contextAttachHeaderLead');
+    const contextAttachHeaderRest = document.getElementById('contextAttachHeaderRest');
+    const contextAttachTooltipEl = document.getElementById('contextAttachTooltip');
+    const contextAttachPreviewEl = document.getElementById('contextAttachPreview');
+    const contextAttachPreviewList = document.getElementById('contextAttachPreviewList');
+    const contextAttachSendModal = document.getElementById('contextAttachSendModal');
+    const switchSessionModal = document.getElementById('switchSessionModal');
 
     function closeAllDropdowns() {
         profilePicker.classList.remove('is-open');
         modelPicker.classList.remove('is-open');
+        if (contextAttachPicker) contextAttachPicker.classList.remove('is-open');
         profileDropdown.style.display = 'none';
         modelDropdown.style.display = 'none';
+        if (contextAttachDropdown) contextAttachDropdown.style.display = 'none';
+        hideContextAttachTooltip();
+        hideContextAttachPreview();
     }
 
     document.addEventListener('click', function(e) {
         if (e.target.closest('.picker')) {
+            return;
+        }
+        if (e.target.closest('#contextAttachPreview')) {
             return;
         }
         if (!e.target.closest('#input-area')) {
@@ -4650,6 +6076,82 @@ mark.search-mark-active {
     });
     modelDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
 
+    if (contextAttachBtn && contextAttachDropdown) {
+        contextAttachBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const open = contextAttachDropdown.style.display === 'none';
+            closeAllDropdowns();
+            if (open) {
+                contextAttachPicker.classList.add('is-open');
+                contextAttachDropdown.style.display = 'block';
+                renderContextAttachOptions();
+            }
+        });
+        contextAttachDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+    const switchSessionStayBtn = document.getElementById('switchSessionStayBtn');
+    const switchSessionConfirmBtn = document.getElementById('switchSessionConfirmBtn');
+    if (switchSessionStayBtn) {
+        switchSessionStayBtn.addEventListener('click', closeSwitchSessionModal);
+    }
+    if (switchSessionConfirmBtn) {
+        switchSessionConfirmBtn.addEventListener('click', function() {
+            if (!pendingSwitchSessionId) {
+                closeSwitchSessionModal();
+                return;
+            }
+            const sessionId = pendingSwitchSessionId;
+            closeSwitchSessionModal();
+            vscode.postMessage({ type: 'switchSession', sessionId: sessionId, interrupt: true });
+        });
+    }
+    if (switchSessionModal) {
+        switchSessionModal.addEventListener('click', function(e) {
+            if (e.target === switchSessionModal) {
+                closeSwitchSessionModal();
+            }
+        });
+    }
+    bindContextAttachTooltip();
+    bindContextAttachPreview();
+    const contextAttachSendYesBtn = document.getElementById('contextAttachSendYesBtn');
+    const contextAttachSendNoBtn = document.getElementById('contextAttachSendNoBtn');
+    if (contextAttachSendYesBtn) {
+        contextAttachSendYesBtn.addEventListener('click', function() {
+            const text = pendingSendText;
+            if (!text) {
+                closeContextAttachSendModal();
+                return;
+            }
+            finalizeContextAttachSelectionFromPending();
+            closeContextAttachSendModal();
+            executeSendMessage(text, buildContextAttachPayload(false));
+        });
+    }
+    if (contextAttachSendNoBtn) {
+        contextAttachSendNoBtn.addEventListener('click', function() {
+            const text = pendingSendText;
+            if (!text) {
+                closeContextAttachSendModal();
+                return;
+            }
+            contextAttachUnconfirmedIndices = [];
+            contextAttachCustomPending = false;
+            if (contextAttachMode === 'custom' && !contextAttachCustomConfirmed) {
+                contextAttachMode = 'none';
+            }
+            closeContextAttachSendModal();
+            executeSendMessage(text, buildContextAttachPayload(true));
+        });
+    }
+    if (contextAttachSendModal) {
+        contextAttachSendModal.addEventListener('click', function(e) {
+            if (e.target === contextAttachSendModal) {
+                closeContextAttachSendModal();
+            }
+        });
+    }
+
     function renderProfileList(profiles) {
         const list = document.getElementById('profileList');
         const current = document.getElementById('profileLabel').textContent;
@@ -4678,14 +6180,46 @@ mark.search-mark-active {
     }
 
     let modelConfigId = '';
-    function renderModelList(payload) {
-        const list = document.getElementById('modelList');
-        modelConfigId = payload.configId || '';
-        const label = payload.currentLabel || '—';
-        modelLabelEl.textContent = label;
+    let lastModelPayload = null;
+
+    function shouldShowModelPlaceholder(payload) {
+        if (!payload) {
+            return true;
+        }
+        const models = payload.models || [];
+        if (!models.length) {
+            return true;
+        }
+        if (!payload.currentValueId) {
+            return true;
+        }
+        return !models.some(function(m) {
+            return m.valueId === payload.currentValueId;
+        });
+    }
+
+    function updateModelButtonDisplay(payload) {
+        if (!modelLabelEl || !modelBtn) {
+            return;
+        }
+        if (shouldShowModelPlaceholder(payload)) {
+            modelLabelEl.textContent = locale.modelPlaceholder || '';
+            modelBtn.classList.add('is-placeholder');
+            modelBtn.title = locale.modelPlaceholder || locale.switchModel || '';
+            return;
+        }
+        modelLabelEl.textContent = payload.currentLabel || payload.currentValueId || '';
+        modelBtn.classList.remove('is-placeholder');
         modelBtn.title = payload.fromAgent
             ? locale.modelFromAgent
             : locale.modelLocalPreference;
+    }
+
+    function renderModelList(payload) {
+        const list = document.getElementById('modelList');
+        lastModelPayload = payload;
+        modelConfigId = payload.configId || '';
+        updateModelButtonDisplay(payload);
 
         const groups = Array.isArray(payload.groups) ? payload.groups.filter(function(g) {
             return g && Array.isArray(g.models) && g.models.length > 0;
@@ -4987,7 +6521,7 @@ mark.search-mark-active {
                     return;
                 }
                 if (tab.dataset.id !== activeSessionId) {
-                    vscode.postMessage({ type: 'switchSession', sessionId: tab.dataset.id });
+                    requestSwitchSession(tab.dataset.id);
                 }
             });
             tab.addEventListener('dblclick', function(e) {
@@ -5110,6 +6644,7 @@ mark.search-mark-active {
                     if (!window._hermesRendered) {
                         scheduleSessionMarkdownRender();
                     }
+                    maybeFocusInputAfterResponse();
                 } else if (msg.status === 'prompting') {
                     isPrompting = true;
                     resetAutoScrollFollow();
@@ -5222,6 +6757,10 @@ mark.search-mark-active {
                 showModal(helpModal);
                 break;
 
+            case 'openFaq':
+                showModal(faqModal);
+                break;
+
             case 'config':
                 window._showThoughts = msg.showThoughts;
                 window._showToolCalls = msg.showToolCalls;
@@ -5243,6 +6782,7 @@ mark.search-mark-active {
 
             case 'pluginInfo':
                 pluginInfo = msg;
+                renderAboutContent();
                 break;
 
             case 'fileList':
@@ -5286,6 +6826,18 @@ mark.search-mark-active {
 
             case 'permissionDismiss':
                 dismissPermissionRequest(msg.id, msg.status || locale.permissionCancelled);
+                break;
+
+            case 'showContextAttach':
+                showContextAttachPicker();
+                break;
+
+            case 'hideContextAttach':
+                hideContextAttachPicker();
+                break;
+
+            case 'markSessionReset':
+                insertLocalHistoryDivider();
                 break;
         }
     });
