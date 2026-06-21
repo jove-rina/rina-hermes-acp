@@ -22,6 +22,13 @@ import {
     type ModelListState
 } from './modelConfig';
 import type { SessionMcpServer } from './mcpConfig';
+import { normalizeHermesCliProfile } from './hermesProfile';
+import type { AcpModelOptionsResponse } from './acpModelCatalog';
+import {
+    ToolCallTracker,
+    formatToolCallDisplay,
+    parseToolCallSessionUpdate,
+} from './toolCallUpdate';
 
 export type AcpStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'error';
 export type { ModelListState } from './modelConfig';
@@ -127,12 +134,25 @@ export class AcpClient {
     private _thoughtBuffer: string = '';
     private _configOptions: unknown[] = [];
     private _modelListState: ModelListState | null = null;
+    /** Model id last applied to the live ACP session (not UI preference alone). */
+    private _runtimeModelId: string = '';
     /** Raw Hermes ``models`` payload; preserved across empty config_option updates. */
     private _hermesModelsRaw: unknown = null;
     private _onModelsChanged: ModelsChangedHandler;
     private _onUsage: UsageHandler;
     private _onSegmentEnd: SegmentEndHandler;
     private _resolveMcpServers: McpServersResolver;
+    /** Monotonic id so stale prompt rejections after cancel are ignored. */
+    private _activePromptId = 0;
+    private _promptPromise: Promise<unknown> | null = null;
+    /** When false, drop streaming chunks from a cancelled or superseded turn. */
+    private _acceptStreamOutput = false;
+    private _toolCallTracker = new ToolCallTracker();
+    /** Cached after first ``method not found`` — avoids repeated Hermes log noise. */
+    private _modelOptionsKnownUnsupported = false;
+    private _hermesSetModelKnownUnsupported = false;
+    private _setConfigOptionKnownUnsupported = false;
+    private _modelOptionsFetchPromise: Promise<AcpModelOptionsResponse | null> | null = null;
 
     private static readonly VALID: Record<AcpStatus, AcpStatus[]> = {
         idle:        ['connecting'],
@@ -181,6 +201,52 @@ export class AcpClient {
         return this._modelListState ?? buildModelListState(this._configOptions);
     }
 
+    getRuntimeModelId(): string {
+        return this._runtimeModelId;
+    }
+
+    getHermesModelsRaw(): unknown {
+        return this._hermesModelsRaw;
+    }
+
+    /** Fetch grouped model catalog via Hermes ACP ``model.options`` (best-effort). */
+    async fetchModelOptions(): Promise<AcpModelOptionsResponse | null> {
+        if (!this._conn || !this._session || this._modelOptionsKnownUnsupported) {
+            return null;
+        }
+        if (this._modelOptionsFetchPromise) {
+            return this._modelOptionsFetchPromise;
+        }
+        this._modelOptionsFetchPromise = this._fetchModelOptionsOnce();
+        try {
+            return await this._modelOptionsFetchPromise;
+        } finally {
+            this._modelOptionsFetchPromise = null;
+        }
+    }
+
+    private async _fetchModelOptionsOnce(): Promise<AcpModelOptionsResponse | null> {
+        if (!this._conn || !this._session || this._modelOptionsKnownUnsupported) {
+            return null;
+        }
+        try {
+            const response = await this._conn.agent.request('model.options', {
+                sessionId: this._session.sessionId,
+            } as any);
+            if (!response || typeof response !== 'object') {
+                return null;
+            }
+            return response as AcpModelOptionsResponse;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (this._isMethodNotFoundError(err)) {
+                this._modelOptionsKnownUnsupported = true;
+            }
+            this._onLog(`model.options unavailable: ${msg}`);
+            return null;
+        }
+    }
+
     get status(): AcpStatus {
         return this._status;
     }
@@ -194,10 +260,8 @@ export class AcpClient {
             const resolvedPath = hermesPath || await this._findHermes();
             if (!resolvedPath) throw new Error('Hermes executable not found');
 
-            const args = ['acp'];
-            if (hermesProfile) {
-                args.unshift('--profile', hermesProfile);
-            }
+            const profile = normalizeHermesCliProfile(hermesProfile);
+            const args = ['acp', '--profile', profile];
 
             this._process = spawn(resolvedPath, args, {
                 cwd,
@@ -358,32 +422,129 @@ export class AcpClient {
             return;
         }
 
+        const promptId = ++this._activePromptId;
         this._responseBuffer = '';
         this._thoughtBuffer = '';
+        this._toolCallTracker.clear();
         this._transitionTo('prompting', 'Hermes is thinking...');
 
+        if (promptId !== this._activePromptId) {
+            this._restoreReadyAfterAbortedPrompt();
+            return;
+        }
+
+        let promptPromise: Promise<unknown>;
         try {
-            await this._session!.prompt(text);
-            this._transitionTo('ready');
+            promptPromise = this._session!.prompt(text);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            this._onMessage('assistant', `Error: ${msg}`);
-            this._transitionTo('ready');
+            if (promptId === this._activePromptId) {
+                const msg = err instanceof Error ? err.message : String(err);
+                this._onMessage('assistant', `Error: ${msg}`);
+                this._transitionTo('ready');
+            }
+            return;
+        }
+
+        if (promptId !== this._activePromptId) {
+            void this._abandonOrphanPrompt(promptPromise);
+            this._restoreReadyAfterAbortedPrompt();
+            return;
+        }
+
+        this._promptPromise = promptPromise;
+        this._acceptStreamOutput = true;
+
+        try {
+            await promptPromise;
+            if (promptId === this._activePromptId) {
+                this._transitionTo('ready');
+            }
+        } catch (err) {
+            if (promptId === this._activePromptId) {
+                const msg = err instanceof Error ? err.message : String(err);
+                this._onMessage('assistant', `Error: ${msg}`);
+                this._transitionTo('ready');
+            }
+        } finally {
+            if (this._promptPromise === promptPromise) {
+                this._promptPromise = null;
+            }
+            if (promptId === this._activePromptId) {
+                this._acceptStreamOutput = false;
+            }
         }
     }
 
     async cancel(): Promise<void> {
-        if (this._status !== 'prompting' || !this._session || !this._conn) return;
+        if (!this._session || !this._conn) {
+            return;
+        }
+        if (this._status !== 'prompting') {
+            return;
+        }
+
+        ++this._activePromptId;
+        this._acceptStreamOutput = false;
+        this._responseBuffer = '';
+        this._thoughtBuffer = '';
+        this._emitCancelledToolCalls();
+
+        // Let sendMessage observe cancellation if it is between prompting and prompt().
+        await Promise.resolve();
+
+        if (this._status !== 'prompting') {
+            return;
+        }
+
+        const pending = this._promptPromise;
+
         try {
             await this._conn.agent.notify(methods.agent.session.cancel, {
                 sessionId: this._session.sessionId
             });
-            this._responseBuffer = '';
-            this._thoughtBuffer = '';
-            this._transitionTo('ready');
         } catch {
             // best-effort
         }
+
+        if (pending) {
+            await pending.catch(() => {});
+        } else {
+            await this._waitForPromptPromise(3000);
+        }
+
+        this._promptPromise = null;
+        if (this._status === 'prompting') {
+            this._transitionTo('ready');
+        }
+    }
+
+    private _restoreReadyAfterAbortedPrompt(): void {
+        if (this._status === 'prompting') {
+            this._transitionTo('ready');
+        }
+    }
+
+    private async _waitForPromptPromise(timeoutMs: number): Promise<void> {
+        const deadline = Date.now() + timeoutMs;
+        while (!this._promptPromise && this._status === 'prompting' && Date.now() < deadline) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 10));
+        }
+        if (this._promptPromise) {
+            await this._promptPromise.catch(() => {});
+        }
+    }
+
+    private async _abandonOrphanPrompt(promptPromise: Promise<unknown>): Promise<void> {
+        try {
+            if (this._session && this._conn) {
+                await this._conn.agent.notify(methods.agent.session.cancel, {
+                    sessionId: this._session.sessionId
+                });
+            }
+        } catch {
+            // best-effort
+        }
+        await promptPromise.catch(() => {});
     }
 
     async setModel(configId: string, valueId: string): Promise<void> {
@@ -402,29 +563,59 @@ export class AcpClient {
             valueId
         );
 
-        if (useHermesSetModel) {
+        if (useHermesSetModel && !this._hermesSetModelKnownUnsupported) {
             this._onLog(`session/set_model → ${valueId}`);
-            await this._conn.agent.request('session/set_model', {
-                sessionId: this._session.sessionId,
-                modelId: valueId,
-            } as any);
-            this._applyHermesModelSelection(valueId);
-            return;
+            try {
+                await this._conn.agent.request('session/set_model', {
+                    sessionId: this._session.sessionId,
+                    modelId: valueId,
+                } as any);
+                this._runtimeModelId = valueId;
+                this._applyHermesModelSelection(valueId);
+                return;
+            } catch (err) {
+                if (this._isMethodNotFoundError(err)) {
+                    this._hermesSetModelKnownUnsupported = true;
+                    this._onLog('session/set_model unavailable, falling back to set_config_option');
+                } else {
+                    throw err;
+                }
+            }
         }
 
         if (!effectiveConfigId) {
+            if (useHermesSetModel) {
+                this._applyHermesModelSelection(valueId);
+                throw new Error('Agent model config unavailable; selection saved locally only');
+            }
             throw new Error('No model configuration available from agent');
         }
 
-        const response = await this._conn.agent.request(methods.agent.session.setConfigOption, {
-            sessionId: this._session.sessionId,
-            configId: effectiveConfigId,
-            value: valueId,
-        } as any);
+        if (this._setConfigOptionKnownUnsupported) {
+            this._applyHermesModelSelection(valueId);
+            throw new Error('Agent does not support runtime model switching');
+        }
 
-        const updated = (response as { configOptions?: unknown[] } | void)?.configOptions;
-        if (updated) {
-            this._syncConfigOptions(updated);
+        try {
+            const response = await this._conn.agent.request(methods.agent.session.setConfigOption, {
+                sessionId: this._session.sessionId,
+                configId: effectiveConfigId,
+                value: valueId,
+            } as any);
+
+            const updated = (response as { configOptions?: unknown[] } | void)?.configOptions;
+            if (updated) {
+                this._syncConfigOptions(updated);
+            }
+            this._runtimeModelId = valueId;
+        } catch (err) {
+            if (this._isMethodNotFoundError(err)) {
+                this._setConfigOptionKnownUnsupported = true;
+                this._onLog('set_config_option unavailable; keeping local model preference only');
+                this._applyHermesModelSelection(valueId);
+                throw new Error('Agent does not support runtime model switching');
+            }
+            throw err;
         }
     }
 
@@ -433,10 +624,14 @@ export class AcpClient {
             await this.start(cwd);
             return;
         }
+        if (this._status === 'prompting') {
+            await this.cancel();
+        }
         try {
             this._session?.dispose();
             this._responseBuffer = '';
             this._thoughtBuffer = '';
+            this._toolCallTracker.clear();
             const builder = this._conn.agent.buildSession(this._buildNewSessionRequest(cwd));
             this._session = await builder.start();
             this._syncSessionModels(this._session.newSessionResponse);
@@ -461,6 +656,12 @@ export class AcpClient {
             try { term.process.kill(); } catch { /* ignore */ }
         }
         this._terminals.clear();
+        this._toolCallTracker.clear();
+        this._modelOptionsKnownUnsupported = false;
+        this._hermesSetModelKnownUnsupported = false;
+        this._setConfigOptionKnownUnsupported = false;
+        this._modelOptionsFetchPromise = null;
+        this._runtimeModelId = '';
         this._session = null;
         this._conn = null;
         this._app = null;
@@ -569,6 +770,9 @@ export class AcpClient {
 
         switch (kind) {
             case 'agent_message_chunk': {
+                if (!this._acceptStreamOutput) {
+                    break;
+                }
                 // Accumulate incremental text chunks into buffer.
                 // Assumption: ACP sends INCREMENTAL text per chunk (spec-compliant).
                 // If an agent sends the FULL text each time instead, this will
@@ -583,6 +787,9 @@ export class AcpClient {
             }
 
             case 'agent_thought_chunk': {
+                if (!this._acceptStreamOutput) {
+                    break;
+                }
                 const thought = update.content;
                 const thoughtText = thought?.text || thought?.content?.text || '';
                 if (thoughtText) {
@@ -593,12 +800,18 @@ export class AcpClient {
             }
 
             case 'tool_call':
+                if (!this._acceptStreamOutput) {
+                    break;
+                }
                 this._endAssistantSegment();
-                this._onMessage('tool', `🔧 ${update.title}`, update.toolCallId);
+                this._emitToolCallUpdate(update, 'tool_call');
                 break;
 
             case 'tool_call_update':
-                this._onMessage('tool', `⚙️ ${update.title ?? 'Tool running'}`, update.toolCallId);
+                if (!this._acceptStreamOutput) {
+                    break;
+                }
+                this._emitToolCallUpdate(update, 'tool_call_update');
                 break;
 
             case 'config_option_update': {
@@ -633,6 +846,7 @@ export class AcpClient {
         const state = buildModelListStateFromSessionResponse(source);
         if (state) {
             this._modelListState = state;
+            this._runtimeModelId = state.currentValueId;
         }
         this._onModelsChanged(this._modelListState);
     }
@@ -715,6 +929,21 @@ export class AcpClient {
         this._onSegmentEnd();
     }
 
+    private _emitToolCallUpdate(update: Record<string, unknown>, kind: 'tool_call' | 'tool_call_update'): void {
+        const parsed = parseToolCallSessionUpdate(update, kind);
+        if (!parsed) {
+            return;
+        }
+        const merged = this._toolCallTracker.apply(parsed);
+        this._onMessage('tool', formatToolCallDisplay(merged), merged.toolCallId);
+    }
+
+    private _emitCancelledToolCalls(): void {
+        for (const view of this._toolCallTracker.cancelActive()) {
+            this._onMessage('tool', formatToolCallDisplay(view), view.toolCallId);
+        }
+    }
+
     private _buildNewSessionRequest(cwd: string): { cwd: string; mcpServers: SessionMcpServer[] } {
         const mcpServers = this._resolveMcpServers(cwd);
         this._onLog(`session/new cwd=${cwd} mcpServers=${mcpServers.length}`);
@@ -729,5 +958,10 @@ export class AcpClient {
         this._status = status;
         this._onStatus(status, message);
         return true;
+    }
+
+    private _isMethodNotFoundError(err: unknown): boolean {
+        const msg = err instanceof Error ? err.message : String(err);
+        return /method not found|method_not_found/i.test(msg);
     }
 }

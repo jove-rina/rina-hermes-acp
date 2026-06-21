@@ -77,7 +77,7 @@ export const en: LocaleStrings = {
     aboutDescription: 'Chat with the local <strong>Hermes Agent</strong> directly in the VS Code sidebar. The extension starts a <code>hermes acp</code> subprocess via the ACP protocol, with streaming replies, multi-session tabs, model switching, and terminal integration.',
     aboutFeatureTabs: 'Multi-session tab management',
     aboutFeaturePickers: 'Profile / Model selectors',
-    aboutFeatureInsert: 'One-click code block insert',
+    aboutFeatureInsert: 'Copy/insert code blocks and tables (chat input or editor)',
     aboutFeatureTools: 'Tool calls and thinking process (configurable)',
     repository: 'Repository',
 
@@ -103,13 +103,13 @@ hermes --profile &lt;name&gt; acp</code></pre>
                 <li><code>hermes.profile</code> — maps to <code>--profile</code></li>
                 <li><code>hermes.cwd</code> — agent working directory (defaults to workspace root)</li>
             </ul>
-            <p>Open <strong>Settings</strong> from the menu; connection-related changes <strong>take effect immediately</strong> (reconnects automatically).</p>
+            <p>Open <strong>More → Settings</strong> from the view title bar; connection-related changes <strong>take effect immediately</strong> (reconnects automatically).</p>
 
             <h3>4. Troubleshooting connection</h3>
             <ul>
                 <li>Confirm <code>hermes acp</code> starts in a terminal</li>
                 <li>Set the correct <code>hermes.path</code> in Settings</li>
-                <li>Open <strong>⋯ → Logs</strong> from the menu to inspect connection logs</li>
+                <li>Open <strong>More → Logs</strong> from the view title bar to inspect ERROR/WARNING logs</li>
             </ul>`,
 
     roleYou: 'You',
@@ -142,10 +142,36 @@ hermes --profile &lt;name&gt; acp</code></pre>
     tokenUsageLabel: 'Input TOKEN: {0} / {1} ({2}%)',
     copied: 'Copied',
     clickToInsert: 'Click to insert into input',
-    insertToInput: 'Insert into input',
+    insertToInput: 'Insert into chat input',
+    insertToEditor: 'Insert into editor',
+    insertMenu: 'Insert',
+    noActiveEditor: 'Open an editor first',
+    selectMessages: 'Select',
+    multiSelectAll: 'Select all',
+    multiSelectDelete: 'Delete',
+    multiSelectCopy: 'Copy',
+    multiSelectExport: 'Export',
+    multiSelectExit: 'Exit',
+    multiSelectCount: '{0} selected',
     fileLinkTitle: 'Click to open · hover to preview',
     tabRename: 'Rename',
     tabClose: 'Close',
+    tabContextSid: 'SID',
+    tabContextExport: 'Export',
+    tabContextCopy: 'Copy',
+    tabContextRename: 'Rename',
+    tabContextClose: 'Close',
+    tabContextCloseOthers: 'Close Others',
+    tabContextCloseLeft: 'Close to the Left',
+    tabContextCloseRight: 'Close to the Right',
+    tabContextCloseAll: 'Close All',
+    tabContextPin: 'Pin',
+    tabContextUnpin: 'Unpin',
+    copySid: 'Copy session ID',
+    sessionExportSessionId: 'Session ID: {0}',
+    sessionExportModel: 'Model: {0}',
+    sessionExportDate: 'Date: {0}',
+    sessionRendering: 'Rendering messages…',
     localHistoryDivider: 'Local chat history only',
     localHistoryDividerTitle: 'Agent context was reset; new messages will not include the conversation above',
     localHistoryBadge: 'Local',

@@ -4,6 +4,7 @@ import {
     buildCatalogFromHermesModelsRaw,
     buildCatalogFromModelOptions,
     parseProviderFromDescription,
+    resolveModelCatalog,
 } from '../../acp/acpModelCatalog';
 
 describe('acpModelCatalog', () => {
@@ -65,5 +66,37 @@ describe('acpModelCatalog', () => {
     it('parseProviderFromDescription extracts provider label', () => {
         assert.strictEqual(parseProviderFromDescription('Provider: DeepSeek • current'), 'DeepSeek');
         assert.strictEqual(parseProviderFromDescription('Provider: Custom endpoint'), 'Custom endpoint');
+    });
+
+    it('resolveModelCatalog prefers model.options over session models', () => {
+        const fromOptions = resolveModelCatalog(
+            {
+                model: 'deepseek-v4-flash',
+                provider: 'custom:deepseek',
+                providers: [{
+                    slug: 'custom:deepseek',
+                    name: 'DeepSeek',
+                    is_current: true,
+                    models: ['deepseek-v4-flash'],
+                }],
+            },
+            {
+                currentModelId: 'other:model',
+                availableModels: [{ modelId: 'other:model', name: 'Other' }],
+            }
+        );
+        assert.ok(fromOptions);
+        assert.strictEqual(fromOptions!.profileDefault?.modelName, 'deepseek-v4-flash');
+
+        const fromSession = resolveModelCatalog(null, {
+            currentModelId: 'custom:deepseek-v4-flash',
+            availableModels: [{
+                modelId: 'custom:deepseek-v4-flash',
+                name: 'deepseek-v4-flash',
+                description: 'Provider: DeepSeek',
+            }],
+        });
+        assert.ok(fromSession);
+        assert.strictEqual(fromSession!.groups[0].name, 'DeepSeek');
     });
 });

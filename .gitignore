@@ -6,3 +6,9 @@ out/
 .chat-history.json
 .sessions.json
 docs/**
+
+# npm only — ignore other package manager lock files
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb

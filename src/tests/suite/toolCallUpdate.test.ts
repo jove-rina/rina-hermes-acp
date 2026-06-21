@@ -3,6 +3,7 @@ import assert from 'assert';
 import {
     ToolCallTracker,
     extractToolCallBody,
+    formatToolCallDisplay,
     formatToolCallSummary,
     normalizeToolCallStatus,
     parseToolCallSessionUpdate,
@@ -47,6 +48,34 @@ describe('toolCallUpdate', () => {
     it('extractToolCallBody stringifies rawOutput objects', () => {
         const body = extractToolCallBody({ rawOutput: { exitCode: 1 } });
         assert.ok(body?.includes('exitCode'));
+    });
+
+    it('extractToolCallBody includes rawInput and content', () => {
+        const body = extractToolCallBody({
+            content: [{ type: 'text', text: 'running' }],
+            rawInput: { path: '/tmp/a.ts' },
+        });
+        assert.ok(body?.includes('running'));
+        assert.ok(body?.includes('path'));
+    });
+
+    it('formatToolCallDisplay includes body when present', () => {
+        const text = formatToolCallDisplay({
+            toolCallId: 'tc-1',
+            status: 'in_progress',
+            title: 'Read file',
+            body: 'path: README.md',
+        });
+        assert.strictEqual(text, '⚙️ Read file\n\npath: README.md');
+    });
+
+    it('formatToolCallDisplay uses title only when no body', () => {
+        const text = formatToolCallDisplay({
+            toolCallId: 'tc-1',
+            status: 'pending',
+            title: 'Tool running',
+        });
+        assert.strictEqual(text, '🔧 Tool running');
     });
 });
 

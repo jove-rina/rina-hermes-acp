@@ -77,7 +77,7 @@ export const zhCn: LocaleStrings = {
     aboutDescription: '在 VS Code 侧边栏直接与本地 <strong>Hermes Agent</strong> 对话。插件通过 ACP 协议自动启动 <code>hermes acp</code> 子进程，支持流式回复、多会话 Tab、模型切换与终端集成。',
     aboutFeatureTabs: '多会话 Tab 管理历史对话',
     aboutFeaturePickers: 'Profile / Model 选择器',
-    aboutFeatureInsert: '代码块一键插入输入框',
+    aboutFeatureInsert: '代码块/表格复制与插入（对话框/编辑器）',
     aboutFeatureTools: '工具调用与思考过程（可配置显示）',
     repository: '仓库',
 
@@ -103,13 +103,13 @@ hermes --profile &lt;name&gt; acp</code></pre>
                 <li><code>hermes.profile</code> — 对应 <code>--profile</code> 参数</li>
                 <li><code>hermes.cwd</code> — Agent 工作目录（默认工作区根目录）</li>
             </ul>
-            <p>点击菜单「配置」可打开 Settings，修改后<strong>实时生效</strong>（连接相关项会自动重连）。</p>
+            <p>点击视图标题栏 <strong>更多 → 配置</strong> 可打开 Settings，修改后<strong>实时生效</strong>（连接相关项会自动重连）。</p>
 
             <h3>4. 连接失败排查</h3>
             <ul>
                 <li>确认 <code>hermes acp</code> 在终端能正常启动</li>
                 <li>在 Settings 中设置正确的 <code>hermes.path</code></li>
-                <li>点击菜单「⋯ → 日志」查看连接日志</li>
+                <li>点击视图标题栏 <strong>更多 → 日志</strong> 查看 ERROR/WARNING 日志</li>
             </ul>`,
 
     roleYou: '你',
@@ -142,10 +142,36 @@ hermes --profile &lt;name&gt; acp</code></pre>
     tokenUsageLabel: '输入 TOKEN: {0} / {1} ({2}%)',
     copied: '已复制',
     clickToInsert: '点击插入到输入框',
-    insertToInput: '插入到输入框',
+    insertToInput: '插入到对话框',
+    insertToEditor: '插入到编辑器',
+    insertMenu: '插入',
+    noActiveEditor: '请先打开一个编辑器',
+    selectMessages: '选择',
+    multiSelectAll: '全选',
+    multiSelectDelete: '删除',
+    multiSelectCopy: '复制',
+    multiSelectExport: '导出',
+    multiSelectExit: '退出',
+    multiSelectCount: '已选 {0} 项',
     fileLinkTitle: '点击打开 · 悬停预览',
     tabRename: '重命名',
     tabClose: '关闭',
+    tabContextSid: 'SID',
+    tabContextExport: '导出',
+    tabContextCopy: '复制',
+    tabContextRename: '重命名',
+    tabContextClose: '关闭',
+    tabContextCloseOthers: '关闭其他',
+    tabContextCloseLeft: '关闭左侧',
+    tabContextCloseRight: '关闭右侧',
+    tabContextCloseAll: '全部关闭',
+    tabContextPin: '固定',
+    tabContextUnpin: '释放',
+    copySid: '复制会话 ID',
+    sessionExportSessionId: '会话ID：{0}',
+    sessionExportModel: '模型：{0}',
+    sessionExportDate: '日期：{0}',
+    sessionRendering: '正在渲染消息…',
     localHistoryDivider: '以上仅为本地聊天记录',
     localHistoryDividerTitle: 'Agent 上下文已重置，继续对话时不会带上方的内容',
     localHistoryBadge: '本地',

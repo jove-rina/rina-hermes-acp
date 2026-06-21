@@ -46,9 +46,100 @@
       {
         "command": "hermes.sendSelection",
         "title": "%commands.hermes.sendSelection.title%"
+      },
+      {
+        "command": "hermes.reloadExtension",
+        "title": "%commands.hermes.reloadExtension.title%",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "hermes.reloadSession",
+        "title": "%commands.hermes.reloadSession.title%",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "hermes.openSettings",
+        "title": "%commands.hermes.openSettings.title%",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "hermes.checkUpdate",
+        "title": "%commands.hermes.checkUpdate.title%",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "hermes.openAbout",
+        "title": "%commands.hermes.openAbout.title%",
+        "icon": "$(info)"
+      },
+      {
+        "command": "hermes.openHelp",
+        "title": "%commands.hermes.openHelp.title%",
+        "icon": "$(question)"
+      },
+      {
+        "command": "hermes.openLogs",
+        "title": "%commands.hermes.openLogs.title%",
+        "icon": "$(output)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "hermes.reloadMenu",
+        "label": "%submenus.hermes.reloadMenu.label%",
+        "icon": "$(refresh)"
+      },
+      {
+        "id": "hermes.moreMenu",
+        "label": "%submenus.hermes.moreMenu.label%",
+        "icon": "$(ellipsis)"
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "submenu": "hermes.reloadMenu",
+          "when": "view == hermesChat",
+          "group": "navigation@1"
+        },
+        {
+          "submenu": "hermes.moreMenu",
+          "when": "view == hermesChat",
+          "group": "navigation@2"
+        }
+      ],
+      "hermes.reloadMenu": [
+        {
+          "command": "hermes.reloadExtension",
+          "group": "1@1"
+        },
+        {
+          "command": "hermes.reloadSession",
+          "group": "1@2"
+        }
+      ],
+      "hermes.moreMenu": [
+        {
+          "command": "hermes.openSettings",
+          "group": "1@1"
+        },
+        {
+          "command": "hermes.checkUpdate",
+          "group": "1@2"
+        },
+        {
+          "command": "hermes.openAbout",
+          "group": "2@1"
+        },
+        {
+          "command": "hermes.openHelp",
+          "group": "2@2"
+        },
+        {
+          "command": "hermes.openLogs",
+          "group": "3@1"
+        }
+      ],
       "editor/context": [
         {
           "command": "hermes.sendSelection",
@@ -76,12 +167,12 @@
         },
         "hermes.showThoughts": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "%configuration.hermes.showThoughts.description%"
         },
         "hermes.showToolCalls": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "%configuration.hermes.showToolCalls.description%"
         },
         "hermes.models": {

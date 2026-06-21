@@ -9,3 +9,12 @@ export function normalizeHermesCliProfile(profile?: string | null): string {
     }
     return trimmed;
 }
+
+/** Map a CLI profile id to a stable on-disk storage scope key. */
+export function scopeKeyForCliProfile(profile?: string | null): string {
+    const normalized = normalizeHermesCliProfile(profile);
+    if (normalized === HERMES_DEFAULT_PROFILE) {
+        return '__default__';
+    }
+    return normalized.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 120) || '__default__';
+}

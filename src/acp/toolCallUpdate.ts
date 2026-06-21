@@ -37,23 +37,63 @@ export function normalizeToolCallStatus(
 }
 
 export function extractToolCallBody(update: Record<string, unknown>): string | undefined {
+    const parts: string[] = [];
+
     const fromContent = extractTextFromContentBlock(update.content);
-    if (fromContent) {
-        return fromContent;
+    if (fromContent.trim()) {
+        parts.push(fromContent.trim());
     }
 
-    const rawOutput = update.rawOutput;
-    if (rawOutput == null) {
+    const rawInput = formatToolCallRawValue(update.rawInput ?? update.raw_input);
+    if (rawInput && !parts.includes(rawInput)) {
+        parts.push(rawInput);
+    }
+
+    const rawOutput = formatToolCallRawValue(update.rawOutput ?? update.raw_output);
+    if (rawOutput && !parts.includes(rawOutput)) {
+        parts.push(rawOutput);
+    }
+
+    const description = update.description;
+    if (typeof description === 'string' && description.trim()) {
+        const trimmed = description.trim();
+        if (!parts.includes(trimmed)) {
+            parts.push(trimmed);
+        }
+    }
+
+    if (parts.length === 0) {
         return undefined;
     }
-    if (typeof rawOutput === 'string') {
-        return rawOutput;
+    return parts.join('\n\n');
+}
+
+function formatToolCallRawValue(value: unknown): string | undefined {
+    if (value == null) {
+        return undefined;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed || undefined;
     }
     try {
-        return JSON.stringify(rawOutput, null, 2);
+        return JSON.stringify(value, null, 2);
     } catch {
-        return String(rawOutput);
+        return String(value);
     }
+}
+
+export function formatToolCallSummary(status: ToolCallStatus, title: string): string {
+    return `${TOOL_CALL_ICONS[status]} ${title}`;
+}
+
+export function formatToolCallDisplay(view: ToolCallUpdateView): string {
+    const summary = formatToolCallSummary(view.status, view.title);
+    const body = view.body?.trim();
+    if (!body) {
+        return summary;
+    }
+    return `${summary}\n\n${body}`;
 }
 
 export function parseToolCallSessionUpdate(
@@ -79,8 +119,19 @@ export function parseToolCallSessionUpdate(
     };
 }
 
-export function formatToolCallSummary(status: ToolCallStatus, title: string): string {
-    return `${TOOL_CALL_ICONS[status]} ${title}`;
+function mergeToolCallBodies(prev?: string, incoming?: string): string | undefined {
+    const next = incoming?.trim();
+    const prior = prev?.trim();
+    if (!next) {
+        return prior;
+    }
+    if (!prior) {
+        return next;
+    }
+    if (prior === next || prior.includes(next) || next.includes(prior)) {
+        return prior.length >= next.length ? prior : next;
+    }
+    return `${prior}\n\n${next}`;
 }
 
 export class ToolCallTracker {
@@ -97,7 +148,7 @@ export class ToolCallTracker {
             status: incoming.status,
             title: incoming.title || prev?.title || 'Tool',
             kind: incoming.kind ?? prev?.kind,
-            body: incoming.body ?? prev?.body,
+            body: mergeToolCallBodies(prev?.body, incoming.body),
         };
 
         if (TERMINAL_STATUSES.has(merged.status)) {

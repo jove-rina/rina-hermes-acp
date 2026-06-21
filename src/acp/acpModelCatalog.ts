@@ -174,6 +174,20 @@ function providerSlugFromDisplayName(name: string): string {
     return normalized.includes(':') ? normalized : `custom:${normalized}`;
 }
 
+/** Prefer Hermes ``model.options``; fall back to session ``models.availableModels``. */
+export function resolveModelCatalog(
+    modelOptions: AcpModelOptionsResponse | null | undefined,
+    hermesModelsRaw: unknown
+): ProfileModelCatalog | null {
+    if (modelOptions?.providers?.length) {
+        const catalog = buildCatalogFromModelOptions(modelOptions);
+        if (catalog.groups.length > 0) {
+            return catalog;
+        }
+    }
+    return buildCatalogFromHermesModelsRaw(hermesModelsRaw);
+}
+
 function flattenGroupModels(groups: ModelProviderGroup[]): ModelListItem[] {
     const flat: ModelListItem[] = [];
     const seen = new Set<string>();
