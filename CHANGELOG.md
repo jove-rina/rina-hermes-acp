@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-22
+
+### Added
+
+- **Environment detection** (view title **Environment** menu): Layered Hermes discovery (L0–L5), version verification, and compact **percentage progress** in the chat toolbar with expandable step details
+- **ACP readiness check**: After Hermes is found, runs `hermes acp --check`; on failure, attempts `pip install agent-client-protocol==0.9.0` and re-checks
+- **Environment configuration** (wrench menu): Configure Hermes to extension settings or system PATH; always available even when already configured
+- **Smart detection trigger**: Skips full detection on connect when Hermes is already configured in the extension or on system PATH and passes quick verification (including ACP)
+- **Cancel detection**: Closing the progress bar aborts an in-progress environment scan
+
+### Fixed
+
+- **Cursor — Settings**: **More → Settings** now opens the VS Code Settings UI filtered to this extension (instead of `settings.json`, which often did nothing visible in Cursor)
+- Windows user PATH writes no longer corrupt paths due to JSON/PowerShell escaping
+- Detection summary and detail titles reflect completion state; completed steps show success icons instead of spinners
+
 ## [0.3.0] - 2026-06-21
 
 ### Added
@@ -52,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - After approval or tool calls, subsequent assistant replies no longer incorrectly append to old bubbles but start a new message segment
 - `allow_session` option no longer incorrectly displays as "Always allow" (`optionId` takes priority over `kind` mapping)
 
+[0.3.1]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.2...v0.2.5

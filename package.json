@@ -2,7 +2,7 @@
   "name": "rina-hermes-acp",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "JoveRina",
   "icon": "media/icon.png",
   "license": "MIT",
@@ -86,6 +86,21 @@
         "command": "hermes.openLogs",
         "title": "%commands.hermes.openLogs.title%",
         "icon": "$(output)"
+      },
+      {
+        "command": "hermes.detectEnvironment",
+        "title": "%commands.hermes.detectEnvironment.title%",
+        "icon": "$(search)"
+      },
+      {
+        "command": "hermes.detectEnvironmentBusy",
+        "title": "%commands.hermes.detectEnvironmentBusy.title%",
+        "icon": "$(sync~spin)"
+      },
+      {
+        "command": "hermes.configureEnvironment",
+        "title": "%commands.hermes.configureEnvironment.title%",
+        "icon": "$(settings-gear)"
       }
     ],
     "submenus": [
@@ -93,6 +108,11 @@
         "id": "hermes.reloadMenu",
         "label": "%submenus.hermes.reloadMenu.label%",
         "icon": "$(refresh)"
+      },
+      {
+        "id": "hermes.envMenu",
+        "label": "%submenus.hermes.envMenu.label%",
+        "icon": "$(wrench)"
       },
       {
         "id": "hermes.moreMenu",
@@ -103,6 +123,11 @@
     "menus": {
       "view/title": [
         {
+          "submenu": "hermes.envMenu",
+          "when": "view == hermesChat",
+          "group": "navigation@0"
+        },
+        {
           "submenu": "hermes.reloadMenu",
           "when": "view == hermesChat",
           "group": "navigation@1"
@@ -111,6 +136,23 @@
           "submenu": "hermes.moreMenu",
           "when": "view == hermesChat",
           "group": "navigation@2"
+        }
+      ],
+      "hermes.envMenu": [
+        {
+          "command": "hermes.detectEnvironment",
+          "when": "!hermesDetectInProgress",
+          "group": "1@1"
+        },
+        {
+          "command": "hermes.detectEnvironmentBusy",
+          "when": "hermesDetectInProgress",
+          "group": "1@1"
+        },
+        {
+          "command": "hermes.configureEnvironment",
+          "when": "!hermesDetectInProgress",
+          "group": "1@2"
         }
       ],
       "hermes.reloadMenu": [

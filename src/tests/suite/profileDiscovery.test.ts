@@ -1,6 +1,8 @@
 import { describe, it } from 'mocha';
 import assert from 'assert';
-import { parseProfileListOutput } from '../../acp/profileDiscovery';
+import * as os from 'os';
+import * as path from 'path';
+import { parseProfileListOutput, buildHermesExecutableCandidates } from '../../acp/profileDiscovery';
 
 describe('profileDiscovery', () => {
     it('parseProfileListOutput extracts profile ids and puts default first', () => {
@@ -17,5 +19,18 @@ describe('profileDiscovery', () => {
 
     it('parseProfileListOutput returns default when output is empty', () => {
         assert.deepStrictEqual(parseProfileListOutput(''), ['default']);
+    });
+
+    it('buildHermesExecutableCandidates includes platform install paths', () => {
+        const candidates = buildHermesExecutableCandidates();
+        assert.ok(candidates.includes('hermes'));
+        if (process.platform === 'win32') {
+            const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+            assert.ok(candidates.some((candidate) =>
+                candidate.includes(path.join(localAppData, 'hermes', 'hermes-agent', 'venv', 'Scripts', 'hermes.exe'))
+            ));
+        } else {
+            assert.ok(candidates.some((candidate) => candidate.endsWith(path.join('.hermes', 'hermes-agent', 'venv', 'bin', 'hermes'))));
+        }
     });
 });

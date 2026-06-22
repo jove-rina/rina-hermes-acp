@@ -98,6 +98,226 @@ body {
 .retry-btn[hidden] {
     display: none;
 }
+.detect-env-btn {
+    font-size: 11px;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.detect-env-bar {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 25;
+    width: auto;
+    max-width: min(200px, calc(100% - 150px));
+}
+.detect-env-bar[hidden] {
+    display: none !important;
+}
+.detect-env-bar-panel {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--input-bg);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.detect-env-main {
+    flex: 0 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border: none;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    font-size: 10px;
+    text-align: left;
+    min-height: 22px;
+    line-height: 1.35;
+}
+.detect-env-main:hover {
+    color: var(--primary);
+}
+.detect-env-text {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.detect-env-hint {
+    color: var(--dim);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+.detect-env-chevron {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+}
+.detect-env-hint.is-open .detect-env-chevron {
+    transform: rotate(180deg);
+}
+.detect-env-close {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.detect-env-close:hover {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--border) 50%, transparent);
+}
+.detect-env-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    position: relative;
+    display: inline-block;
+}
+.detect-env-icon.running {
+    border: 2px solid color-mix(in srgb, #f0ad4e 55%, transparent);
+    border-top-color: #f0ad4e;
+    border-radius: 50%;
+    animation: detect-spin 0.75s linear infinite;
+}
+.detect-env-icon.ok::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0;
+    width: 4px;
+    height: 7px;
+    border: solid #5cb85c;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.detect-env-icon.fail::before,
+.detect-env-icon.fail::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 2px;
+    height: 8px;
+    background: #d9534f;
+    border-radius: 1px;
+}
+.detect-env-icon.fail::before {
+    transform: rotate(45deg);
+}
+.detect-env-icon.fail::after {
+    transform: rotate(-45deg);
+}
+.detect-env-icon.skip::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 5px;
+    width: 8px;
+    height: 2px;
+    background: #888;
+    border-radius: 1px;
+}
+@keyframes detect-spin {
+    to { transform: rotate(360deg); }
+}
+.detect-env-details {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(520px, calc(100vw - 24px));
+    z-index: 150;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 8px 10px;
+}
+.detect-env-details[hidden] {
+    display: none !important;
+}
+.detect-env-details-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 6px;
+    text-align: center;
+}
+.detect-env-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.detect-env-step {
+    display: flex;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    align-items: flex-start;
+}
+.detect-env-step:last-child {
+    border-bottom: none;
+}
+.detect-env-step-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    position: relative;
+}
+.detect-env-step-body {
+    flex: 1;
+    min-width: 0;
+}
+.detect-env-step-label {
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.5;
+}
+.detect-env-step-detail {
+    color: var(--dim);
+    font-size: 10px;
+    word-break: break-all;
+    white-space: pre-wrap;
+    margin-top: 2px;
+    line-height: 1.45;
+}
+.connection-error-actions .retry-btn {
+    font-size: 12px;
+    padding: 4px 10px;
+}
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
@@ -2334,6 +2554,7 @@ mark.search-mark-active {
         <span class="dot idle" id="statusDot"></span>
         <span id="statusText"></span>
         <button class="retry-btn" id="retryBtn" hidden>↻</button>
+        <button class="retry-btn detect-env-btn" id="detectEnvBtn" hidden></button>
     </div>
     <div class="toolbar-pickers">
         <div class="picker" id="profilePicker">
@@ -2344,6 +2565,24 @@ mark.search-mark-active {
                 <div class="dropdown-header" id="profilesHeader"></div>
                 <div id="profileList"></div>
             </div>
+        </div>
+    </div>
+    <div id="detectEnvBar" class="detect-env-bar" hidden>
+        <div class="detect-env-bar-panel">
+            <button type="button" class="detect-env-main" id="detectEnvToggle" aria-expanded="false">
+                <span class="detect-env-icon running" id="detectEnvCompactIcon" aria-hidden="true"></span>
+                <span class="detect-env-text" id="detectEnvCompactText"></span>
+                <span class="detect-env-hint" id="detectEnvCompactHint" aria-hidden="true">
+                    <svg class="detect-env-chevron" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 6l4 4 4-4"/>
+                    </svg>
+                </span>
+            </button>
+            <button type="button" class="detect-env-close" id="detectEnvClose" aria-label="✕">✕</button>
+        </div>
+        <div class="detect-env-details" id="detectEnvDetails" hidden>
+            <div class="detect-env-details-title" id="detectEnvDetailsTitle"></div>
+            <ul class="detect-env-steps" id="detectEnvSteps"></ul>
         </div>
     </div>
     <div class="toolbar-actions">
@@ -2608,6 +2847,7 @@ mark.search-mark-active {
 
     function setConnectingPlaceholder() {
         if (!placeholder) return;
+        placeholder.className = 'placeholder';
         placeholder.textContent = '';
         placeholder.appendChild(document.createTextNode(locale.connectingTitle || ''));
         placeholder.appendChild(document.createElement('br'));
@@ -2616,6 +2856,200 @@ mark.search-mark-active {
         hint.style.opacity = '0.6';
         hint.textContent = locale.connectingHint || '';
         placeholder.appendChild(hint);
+    }
+
+    const DETECT_STEP_IDS = [
+        'config', 'path_lookup', 'known_path', 'pip', 'python_import', 'hermes_home', 'verify', 'acp_check', 'acp_install', 'summary',
+    ];
+    const DETECT_STEP_LOCALE_KEYS = {
+        config: 'detectEnvironmentStepConfig',
+        path_lookup: 'detectEnvironmentStepPath',
+        known_path: 'detectEnvironmentStepKnownPath',
+        pip: 'detectEnvironmentStepPip',
+        python_import: 'detectEnvironmentStepPython',
+        hermes_home: 'detectEnvironmentStepHermesHome',
+        verify: 'detectEnvironmentStepVerify',
+        acp_check: 'detectEnvironmentStepAcpCheck',
+        acp_install: 'detectEnvironmentStepAcpInstall',
+        summary: 'detectEnvironmentStepSummary',
+    };
+
+    let detectEnvDetailsOpen = false;
+    let detectEnvPanelReady = false;
+    let detectEnvFinished = false;
+
+    function detectStepLabel(stepId) {
+        const key = DETECT_STEP_LOCALE_KEYS[stepId];
+        return key ? (locale[key] || stepId) : stepId;
+    }
+
+    function formatDetectStepDetail(msg) {
+        if (msg.status === 'running') return '…';
+        if (msg.status === 'skip') return locale.detectEnvironmentStepSkipped || 'Skipped';
+        if (msg.step === 'verify') {
+            return localeText(
+                'detectEnvironmentStepVerifyCount',
+                msg.verifiedCount != null ? msg.verifiedCount : 0,
+                msg.totalCount != null ? msg.totalCount : 0,
+            );
+        }
+        if (msg.step === 'acp_check') {
+            if (msg.status === 'ok') return msg.detail || locale.detectEnvironmentStepAcpOk || '';
+            if (msg.status === 'fail') return msg.detail || locale.detectEnvironmentStepAcpFail || '';
+        }
+        if (msg.step === 'acp_install') {
+            if (msg.status === 'ok') return msg.detail || locale.detectEnvironmentStepAcpInstallOk || '';
+            if (msg.status === 'fail') return msg.detail || locale.detectEnvironmentStepAcpInstallFail || '';
+        }
+        if (msg.step === 'summary') {
+            if (msg.detail) return msg.detail;
+            if (msg.reportStatus === 'ready') return locale.detectEnvironmentSummaryReady || '';
+            if (msg.reportStatus === 'broken') return locale.detectEnvironmentSummaryBroken || '';
+            return locale.detectEnvironmentSummaryInstall || locale.detectEnvironmentSummaryNotFound || '';
+        }
+        if (msg.count > 0) {
+            const summary = localeText('detectEnvironmentStepFoundCount', msg.count);
+            if (msg.detail) return summary + '\n' + msg.detail;
+            return summary;
+        }
+        if (msg.status === 'fail' && msg.detail) return msg.detail;
+        return locale.detectEnvironmentStepNotFound || 'Not found';
+    }
+
+    function setDetectEnvIcon(el, status) {
+        if (!el) return;
+        const keepStep = el.classList.contains('detect-env-step-icon');
+        el.className = (keepStep ? 'detect-env-step-icon ' : '') + 'detect-env-icon ' + (status || 'running');
+        el.textContent = '';
+    }
+
+    function formatDetectProgressDisplay(brief) {
+        if (!brief) return '';
+        return localeText('detectEnvironmentProgressPrefix', brief);
+    }
+
+    function setDetectEnvDetailsTitle() {
+        const detailsTitle = document.getElementById('detectEnvDetailsTitle');
+        if (!detailsTitle) return;
+        detailsTitle.textContent = detectEnvFinished
+            ? (locale.detectEnvironmentCompleteTitle || locale.detectEnvironmentStepSummary || '')
+            : (locale.detectEnvironmentDetectTitle || locale.detectEnvironment || '');
+    }
+
+    function setDetectEnvDetailsOpen(open) {
+        detectEnvDetailsOpen = !!open;
+        const details = document.getElementById('detectEnvDetails');
+        const hint = document.getElementById('detectEnvCompactHint');
+        const toggle = document.getElementById('detectEnvToggle');
+        if (details) details.hidden = !detectEnvDetailsOpen;
+        if (hint) hint.classList.toggle('is-open', detectEnvDetailsOpen);
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', detectEnvDetailsOpen ? 'true' : 'false');
+            toggle.title = detectEnvDetailsOpen
+                ? (locale.detectEnvironmentHideDetails || '')
+                : (locale.detectEnvironmentViewDetails || '');
+        }
+    }
+
+    function ensureDetectEnvironmentPanel() {
+        if (detectEnvPanelReady) return;
+        const list = document.getElementById('detectEnvSteps');
+        if (!list) return;
+        list.textContent = '';
+        DETECT_STEP_IDS.forEach(function(stepId) {
+            const li = document.createElement('li');
+            li.className = 'detect-env-step';
+            li.id = 'detectStep-' + stepId;
+            li.style.display = 'none';
+            const stepIcon = document.createElement('span');
+            stepIcon.className = 'detect-env-step-icon detect-env-icon running';
+            const body = document.createElement('div');
+            body.className = 'detect-env-step-body';
+            const label = document.createElement('div');
+            label.className = 'detect-env-step-label';
+            label.textContent = detectStepLabel(stepId);
+            const detail = document.createElement('div');
+            detail.className = 'detect-env-step-detail';
+            body.appendChild(label);
+            body.appendChild(detail);
+            li.appendChild(stepIcon);
+            li.appendChild(body);
+            list.appendChild(li);
+        });
+        detectEnvPanelReady = true;
+    }
+
+    function showDetectEnvironmentBar() {
+        ensureDetectEnvironmentPanel();
+        const bar = document.getElementById('detectEnvBar');
+        if (bar) bar.hidden = false;
+    }
+
+    function hideDetectEnvironmentBar() {
+        detectEnvFinished = false;
+        setDetectEnvDetailsOpen(false);
+        const bar = document.getElementById('detectEnvBar');
+        if (bar) bar.hidden = true;
+    }
+
+    function setDetectEnvironmentCompact(brief, status) {
+        setDetectEnvIcon(document.getElementById('detectEnvCompactIcon'), status);
+        const textEl = document.getElementById('detectEnvCompactText');
+        if (textEl) {
+            textEl.textContent = brief || '';
+            textEl.title = brief || '';
+        }
+    }
+
+    function updateDetectEnvironmentStep(msg) {
+        ensureDetectEnvironmentPanel();
+        const row = document.getElementById('detectStep-' + msg.step);
+        if (row) {
+            row.style.display = '';
+            setDetectEnvIcon(row.querySelector('.detect-env-step-icon'), msg.status || 'running');
+            const detailEl = row.querySelector('.detect-env-step-detail');
+            if (detailEl) detailEl.textContent = formatDetectStepDetail(msg);
+        }
+        if (msg.brief) {
+            setDetectEnvironmentCompact(msg.brief, msg.status || 'running');
+        }
+    }
+
+    function initDetectEnvironmentStart(mode) {
+        detectEnvFinished = false;
+        showDetectEnvironmentBar();
+        setDetectEnvDetailsOpen(false);
+        setDetectEnvDetailsTitle();
+        const toggle = document.getElementById('detectEnvToggle');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.title = locale.detectEnvironmentViewDetails || '';
+        }
+        DETECT_STEP_IDS.forEach(function(stepId) {
+            const row = document.getElementById('detectStep-' + stepId);
+            if (!row) return;
+            row.style.display = 'none';
+            setDetectEnvIcon(row.querySelector('.detect-env-step-icon'), 'running');
+            const detailEl = row.querySelector('.detect-env-step-detail');
+            if (detailEl) detailEl.textContent = '';
+        });
+        setDetectEnvironmentCompact(
+            formatDetectProgressDisplay('0%'),
+            'running',
+        );
+    }
+
+    function finishDetectEnvironmentPanel(msg) {
+        detectEnvFinished = true;
+        setDetectEnvDetailsTitle();
+        const summaryMsg = {
+            step: 'summary',
+            status: msg.summaryStatus || (msg.status === 'ready' ? 'ok' : 'fail'),
+            reportStatus: msg.status,
+            brief: msg.brief,
+        };
+        updateDetectEnvironmentStep(summaryMsg);
+        setDetectEnvironmentCompact(msg.brief || '', summaryMsg.status);
     }
 
     function buildFaqAccordion(container) {
@@ -2669,6 +3103,11 @@ mark.search-mark-active {
 
         if (toolbarStatus) toolbarStatus.title = locale.connectionStatus;
         if (retryBtnEl) retryBtnEl.title = locale.retry;
+        const detectEnvBtnEl = document.getElementById('detectEnvBtn');
+        if (detectEnvBtnEl) {
+            detectEnvBtnEl.textContent = locale.detectEnvironment || '';
+            detectEnvBtnEl.title = locale.detectEnvironment || '';
+        }
         const profileLabelText = document.getElementById('profileLabelText');
         if (profileLabelText) profileLabelText.textContent = locale.profile;
         if (profileBtnEl) profileBtnEl.title = locale.switchProfile;
@@ -2702,7 +3141,28 @@ mark.search-mark-active {
         const newChatLabelFull = document.getElementById('newChatLabelFull');
         if (newChatLabelFull) newChatLabelFull.textContent = locale.newChatBtn;
         if (newChatBtn) newChatBtn.title = locale.newChatBtn;
-        setConnectingPlaceholder();
+        const detectEnvClose = document.getElementById('detectEnvClose');
+        if (detectEnvClose) {
+            detectEnvClose.title = locale.detectEnvironmentClose || '';
+            detectEnvClose.setAttribute('aria-label', locale.detectEnvironmentClose || 'Close');
+        }
+        if (detectEnvPanelReady) {
+            setDetectEnvDetailsTitle();
+            const toggle = document.getElementById('detectEnvToggle');
+            if (toggle) {
+                toggle.title = detectEnvDetailsOpen
+                    ? (locale.detectEnvironmentHideDetails || '')
+                    : (locale.detectEnvironmentViewDetails || '');
+            }
+            const hint = document.getElementById('detectEnvCompactHint');
+            if (hint) hint.classList.toggle('is-open', detectEnvDetailsOpen);
+            DETECT_STEP_IDS.forEach(function(stepId) {
+                const row = document.getElementById('detectStep-' + stepId);
+                if (!row) return;
+                const label = row.querySelector('.detect-env-step-label');
+                if (label) label.textContent = detectStepLabel(stepId);
+            });
+        }
         if (inputResizeHandle) {
             inputResizeHandle.title = locale.resizeHandle;
             inputResizeHandle.setAttribute('aria-label', locale.resizeHandle);
@@ -4234,6 +4694,7 @@ mark.search-mark-active {
     let connectionAttempted = false;
     const cancelBtn = document.getElementById('cancelBtn');
     const retryBtn = document.getElementById('retryBtn');
+    const detectEnvBtn = document.getElementById('detectEnvBtn');
     let activeSessionId = '';
 
     const filePickerEl = document.getElementById('filePicker');
@@ -4291,24 +4752,47 @@ mark.search-mark-active {
         setQuickPanelOpen(!inputQuickPanel.classList.contains('open'));
     }
 
-    function updateRetryVisibility(status) {
-        if (!retryBtn) return;
-        if (status === 'error') {
-            retryBtn.hidden = false;
-        } else if (status === 'idle' && connectionAttempted) {
-            retryBtn.hidden = false;
-        } else {
-            retryBtn.hidden = true;
+    function updateConnectionActionVisibility(status) {
+        const showActions = status === 'error' || (status === 'idle' && connectionAttempted);
+        if (retryBtn) {
+            retryBtn.hidden = !showActions;
+            retryBtn.disabled = status === 'connecting';
         }
-        retryBtn.disabled = status === 'connecting';
+        if (detectEnvBtn) {
+            detectEnvBtn.hidden = !showActions;
+            detectEnvBtn.disabled = status === 'connecting';
+        }
+    }
+
+    function bindConnectionErrorActions() {
+        const phRetry = document.getElementById('placeholderRetryBtn');
+        if (phRetry) phRetry.addEventListener('click', doRetry);
+        const phDetect = document.getElementById('placeholderDetectEnvBtn');
+        if (phDetect) phDetect.addEventListener('click', doDetectEnvironment);
+    }
+
+    function buildConnectionErrorPlaceholder(errText) {
+        if (placeholder) placeholder.className = 'placeholder';
+        return escapeHtml(errText) +
+            '<div class="connection-error-actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">' +
+            '<button type="button" class="retry-btn" id="placeholderRetryBtn">' + escapeHtml(locale.retryConnect) + '</button>' +
+            '<button type="button" class="retry-btn" id="placeholderDetectEnvBtn">' + escapeHtml(locale.detectEnvironment) + '</button>' +
+            '</div>';
+    }
+
+    function updateRetryVisibility(status) {
+        updateConnectionActionVisibility(status);
     }
 
     function doRetry() {
         if (retryBtn && retryBtn.disabled) return;
         connectionAttempted = true;
-        setConnectingPlaceholder();
-        placeholder.style.display = 'block';
         vscode.postMessage({ type: 'retry' });
+    }
+
+    function doDetectEnvironment() {
+        if (detectEnvBtn && detectEnvBtn.disabled) return;
+        vscode.postMessage({ type: 'detectEnvironment' });
     }
 
     function updateStatus(status, message) {
@@ -5885,13 +6369,40 @@ mark.search-mark-active {
         if (tabContextMenu && !e.target.closest('.tab-context-menu')) {
             hideTabContextMenu();
         }
+        if (detectEnvDetailsOpen && !e.target.closest('.detect-env-bar')) {
+            setDetectEnvDetailsOpen(false);
+            const detectToggle = document.getElementById('detectEnvToggle');
+            if (detectToggle) detectToggle.setAttribute('aria-expanded', 'false');
+        }
     });
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && tabContextMenu && !tabContextMenu.hidden) {
             hideTabContextMenu();
         }
+        if (e.key === 'Escape' && detectEnvDetailsOpen) {
+            setDetectEnvDetailsOpen(false);
+            const detectToggle = document.getElementById('detectEnvToggle');
+            if (detectToggle) detectToggle.setAttribute('aria-expanded', 'false');
+        }
     });
+
+    const detectEnvToggle = document.getElementById('detectEnvToggle');
+    if (detectEnvToggle) {
+        detectEnvToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setDetectEnvDetailsOpen(!detectEnvDetailsOpen);
+            detectEnvToggle.setAttribute('aria-expanded', detectEnvDetailsOpen ? 'true' : 'false');
+        });
+    }
+    const detectEnvCloseBtn = document.getElementById('detectEnvClose');
+    if (detectEnvCloseBtn) {
+        detectEnvCloseBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            hideDetectEnvironmentBar();
+            vscode.postMessage({ type: 'detectEnvironmentDismiss' });
+        });
+    }
 
     if (clearInputBtn) {
         clearInputBtn.addEventListener('click', function() {
@@ -5917,6 +6428,9 @@ mark.search-mark-active {
 
     if (retryBtn) {
         retryBtn.addEventListener('click', doRetry);
+    }
+    if (detectEnvBtn) {
+        detectEnvBtn.addEventListener('click', doDetectEnvironment);
     }
 
     newChatBtn.addEventListener('click', function() {
@@ -6662,11 +7176,9 @@ mark.search-mark-active {
                     setInputMode('disabled');
                     updateTokenUsage(0, 0);
                     const errText = msg.message || locale.connectionError;
-                    placeholder.innerHTML = escapeHtml(errText) +
-                        '<br><button type="button" class="retry-btn" id="placeholderRetryBtn" style="margin-top:10px">' + escapeHtml(locale.retryConnect) + '</button>';
+                    placeholder.innerHTML = buildConnectionErrorPlaceholder(errText);
+                    bindConnectionErrorActions();
                     placeholder.style.display = 'block';
-                    const phRetry = document.getElementById('placeholderRetryBtn');
-                    if (phRetry) phRetry.addEventListener('click', doRetry);
                 } else if (msg.status === 'idle') {
                     isPrompting = false;
                     awaitingFirstChunk = false;
@@ -6696,6 +7208,19 @@ mark.search-mark-active {
 
             case 'restoreHistory':
                 restoreHistory(msg.messages, msg.localHistoryOnly);
+                break;
+
+            case 'detectEnvironmentStart':
+                initDetectEnvironmentStart(msg.mode || 'manual');
+                if (placeholder) placeholder.style.display = 'none';
+                break;
+
+            case 'detectEnvironmentProgress':
+                updateDetectEnvironmentStep(msg);
+                break;
+
+            case 'detectEnvironmentEnd':
+                finishDetectEnvironmentPanel(msg);
                 break;
 
             case 'setLocale':

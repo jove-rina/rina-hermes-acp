@@ -6,6 +6,22 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.1] - 2026-06-22
+
+### 新增
+
+- **环境检测**（视图标题栏 **环境** 菜单）：分层 Hermes 发现（L0–L5）、版本验证；聊天工具栏显示 **百分比进度** 与可展开的步骤详情
+- **ACP 就绪检测**：找到 Hermes 后执行 `hermes acp --check`；失败时尝试 `pip install agent-client-protocol==0.9.0` 并重新检测
+- **环境配置**（扳手菜单）：将 Hermes 写入插件设置或系统 PATH；已配置时仍可重新配置
+- **智能检测触发**：连接时若插件或系统 PATH 中已有可用 Hermes（含 ACP 快速校验），则跳过全量检测
+- **取消检测**：关闭进度条可终止进行中的环境扫描
+
+### 修复
+
+- **Cursor — 配置**：**更多 → 配置** 现打开 VS Code Settings UI 并定位到本扩展（不再尝试打开在 Cursor 中常无可见效果的 `settings.json`）
+- 修复 Windows 用户 PATH 写入时因 JSON/PowerShell 转义导致的路径损坏
+- 检测完成后的摘要与详情标题正确显示；已完成步骤显示成功图标而非 loading
+
 ## [0.3.0] - 2026-06-21
 
 ### 新增
@@ -84,6 +100,7 @@
 - 面向市场的图标、README 与 VSIX 打包（bundle 中排除 icon.svg）。
 - 显示名称定为 **Rina Hermes ACP**（此前受 Marketplace 命名限制经历 **Hermes AI Chat** 等调整）。
 
+[0.3.1]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/jove-rina/rina-hermes-acp/compare/v0.2.2...v0.2.5

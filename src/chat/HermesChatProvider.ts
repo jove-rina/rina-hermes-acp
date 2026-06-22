@@ -6,7 +6,16 @@ import { buildFallbackModelListState, buildModelListStateFromCatalog, isRuntimeM
 import { resolveModelCatalog } from '../acp/acpModelCatalog';
 import { resolveMcpServersForSession } from '../acp/mcpConfig';
 import { normalizeHermesCliProfile, scopeKeyForCliProfile } from '../acp/hermesProfile';
-import { discoverHermesProfiles } from '../acp/profileDiscovery';
+import { discoverHermesProfiles, detectHermesEnvironment, tryResolveHermesQuick } from '../acp/profileDiscovery';
+import type {
+    HermesDetectProgressEvent,
+    HermesDetectSource,
+    HermesDetectStepId,
+    HermesDetectStepStatus,
+    HermesEnvironmentReport,
+    HermesExecutableCandidate,
+} from '../acp/profileDiscovery';
+import { addHermesDirectoryToSystemPath } from '../acp/hermesPathSetup';
 import {
     activeSessionPathFor,
     loadProfileState,
@@ -92,6 +101,13 @@ interface ConnectionTarget {
     configCwd?: string;
 }
 
+interface DetectStepLogEntry {
+    step: HermesDetectStepId;
+    label: string;
+    detail: string;
+    status: HermesDetectStepStatus;
+}
+
 export class HermesChatProvider implements vscode.WebviewViewProvider {
     // ---- Lifecycle ----
     private _view?: vscode.WebviewView;
@@ -137,6 +153,22 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     private _contextAttachMessages: ChatMessage[] = [];
     private _contextAttachActive = false;
     private _contextAttachAwaitingReply = false;
+    private _detectStepLog: DetectStepLogEntry[] = [];
+    private _lastDetectReport: HermesEnvironmentReport | undefined;
+    private _detectInProgress = false;
+    private _detectAbortController?: AbortController;
+    private readonly _detectStepOrder: HermesDetectStepId[] = [
+        'config',
+        'path_lookup',
+        'known_path',
+        'pip',
+        'python_import',
+        'hermes_home',
+        'verify',
+        'acp_check',
+        'acp_install',
+        'summary',
+    ];
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -293,6 +325,12 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'retry':
                     void this._handleRetry();
+                    break;
+                case 'detectEnvironment':
+                    void this.detectEnvironment();
+                    break;
+                case 'detectEnvironmentDismiss':
+                    this._handleDetectEnvironmentDismiss();
                     break;
                 case 'permissionResponse':
                     this._handlePermissionResponse(message.id, message.optionId ?? null);
@@ -969,6 +1007,45 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
 
         const cwd = this._resolveCwd(target.configCwd);
 
+        this._postMessage({
+            type: 'status',
+            status: 'connecting',
+            message: localizeStatusMessage('Starting Hermes ACP...'),
+        });
+
+        const quickPath = await tryResolveHermesQuick(target.configPath);
+        let resolvedPath: string | undefined;
+        if (quickPath) {
+            this._log(`Hermes resolved without full detection: ${quickPath}`);
+            resolvedPath = quickPath;
+        } else {
+            const report = await this._runEnvironmentDetectionWithUi(target.configPath, 'connect');
+            if (report.status === 'cancelled') {
+                this._log('Connect cancelled during environment detection');
+                this._postMessage({
+                    type: 'status',
+                    status: 'disconnected',
+                    message: t('detectEnvironmentCancelled'),
+                });
+                return;
+            }
+            resolvedPath = this._pickBestExecutable(report);
+            if (this._shouldOfferHermesConfiguration(report)) {
+                const configuredPath = await this._offerHermesConfiguration(report);
+                if (configuredPath) {
+                    resolvedPath = configuredPath;
+                }
+            }
+            if (!resolvedPath) {
+                const msg = report.status === 'broken'
+                    ? this._formatDetectBrokenMessage(report)
+                    : t('detectEnvironmentNotFound');
+                this._log(`Connect failed: ${msg}`);
+                this._postMessage({ type: 'status', status: 'error', message: msg });
+                return;
+            }
+        }
+
         this._acp = new AcpClient(
             (role, text, toolCallId) => {
                 this._postPromptScopedMessage({ type: 'addMessage', role, text, toolCallId });
@@ -1096,7 +1173,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         };
         this._deferReadyUntilSessionSetup = true;
         try {
-            await this._acp.start(cwd, target.configPath, target.cliProfile);
+            await this._acp.start(cwd, resolvedPath, target.cliProfile);
             await this._syncModelState({ skipModelOptions: true });
             await this._applySessionModelPreference();
             await this._syncModelState();
@@ -1189,6 +1266,434 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._tokenUsage = null;
         this._postTokenUsage();
         await this._connect(this._activeSelectionId || undefined);
+    }
+
+    private _resetViewTitleToDefault(): void {
+        if (!this._view) {
+            return;
+        }
+        this._view.title = undefined;
+        this._view.description = undefined;
+    }
+
+    private _setDetectContext(inProgress: boolean, reportAvailable: boolean): void {
+        this._detectInProgress = inProgress;
+        void vscode.commands.executeCommand('setContext', 'hermesDetectInProgress', inProgress);
+        void vscode.commands.executeCommand('setContext', 'hermesDetectReportAvailable', reportAvailable);
+    }
+
+    private _handleDetectEnvironmentDismiss(): void {
+        if (this._detectInProgress && this._detectAbortController) {
+            this._detectAbortController.abort();
+            this._log('Environment detection cancelled by user');
+        }
+    }
+
+    private _postDetectProgress(event: HermesDetectProgressEvent): void {
+        const brief = this._formatDetectProgressDisplay(this._formatDetectProgressPercent(event));
+        this._postMessage({
+            type: 'detectEnvironmentProgress',
+            step: event.step,
+            status: event.status,
+            brief,
+            detail: event.detail,
+            paths: event.paths,
+            count: event.count,
+            verifiedCount: event.verifiedCount,
+            totalCount: event.totalCount,
+            reportStatus: event.reportStatus,
+        });
+    }
+
+    private _clearViewDetectProgress(): void {
+        this._resetViewTitleToDefault();
+        this._detectStepLog = [];
+        this._lastDetectReport = undefined;
+        this._setDetectContext(false, false);
+    }
+
+    private _detectStepLabel(step: HermesDetectStepId): string {
+        const keyMap: Record<HermesDetectStepId, keyof LocaleStrings> = {
+            config: 'detectEnvironmentStepConfig',
+            path_lookup: 'detectEnvironmentStepPath',
+            known_path: 'detectEnvironmentStepKnownPath',
+            pip: 'detectEnvironmentStepPip',
+            python_import: 'detectEnvironmentStepPython',
+            hermes_home: 'detectEnvironmentStepHermesHome',
+            verify: 'detectEnvironmentStepVerify',
+            acp_check: 'detectEnvironmentStepAcpCheck',
+            acp_install: 'detectEnvironmentStepAcpInstall',
+            summary: 'detectEnvironmentStepSummary',
+        };
+        return t(keyMap[step]);
+    }
+
+    private _formatDetectStepDetail(event: HermesDetectProgressEvent): string {
+        if (event.status === 'running') {
+            return '…';
+        }
+        if (event.status === 'skip') {
+            return t('detectEnvironmentStepSkipped');
+        }
+        if (event.step === 'verify') {
+            return formatLocaleString(
+                t('detectEnvironmentStepVerifyCount'),
+                event.verifiedCount ?? 0,
+                event.totalCount ?? 0,
+            );
+        }
+        if (event.step === 'acp_check') {
+            if (event.status === 'ok') {
+                return event.detail || t('detectEnvironmentStepAcpOk');
+            }
+            if (event.status === 'fail') {
+                return event.detail || t('detectEnvironmentStepAcpFail');
+            }
+        }
+        if (event.step === 'acp_install') {
+            if (event.status === 'ok') {
+                return event.detail || t('detectEnvironmentStepAcpInstallOk');
+            }
+            if (event.status === 'fail') {
+                return event.detail || t('detectEnvironmentStepAcpInstallFail');
+            }
+        }
+        if (event.step === 'summary') {
+            if (event.detail) {
+                return event.detail;
+            }
+            if (event.reportStatus === 'ready') return t('detectEnvironmentSummaryReady');
+            if (event.reportStatus === 'broken') return t('detectEnvironmentSummaryBroken');
+            return t('detectEnvironmentSummaryInstall');
+        }
+        if ((event.count ?? 0) > 0) {
+            const summary = formatLocaleString(t('detectEnvironmentStepFoundCount'), event.count ?? 0);
+            if (event.detail) {
+                return `${summary}\n${event.detail}`;
+            }
+            return summary;
+        }
+        if (event.status === 'fail' && event.detail) {
+            return event.detail;
+        }
+        return t('detectEnvironmentStepNotFound');
+    }
+
+    private _formatDetectProgressPercent(event: HermesDetectProgressEvent): string {
+        const total = this._detectStepOrder.length;
+        if (total === 0) {
+            return '0%';
+        }
+        const stepIndex = this._detectStepOrder.indexOf(event.step);
+        if (stepIndex < 0) {
+            return '0%';
+        }
+        let completed = stepIndex;
+        if (event.status !== 'running') {
+            completed = stepIndex + 1;
+        }
+        if (event.step === 'summary' && event.status !== 'running') {
+            completed = total;
+        }
+        const percent = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+        return `${percent}%`;
+    }
+
+    private _formatDetectProgressBrief(event: HermesDetectProgressEvent): string {
+        const label = this._detectStepLabel(event.step);
+        const detail = this._formatDetectStepDetail(event).split('\n')[0] || '';
+        return detail ? `${label} · ${detail}` : label;
+    }
+
+    private _formatDetectProgressDisplay(brief: string): string {
+        return formatLocaleString(t('detectEnvironmentProgressPrefix'), brief);
+    }
+
+    private _formatDetectBrokenMessage(report: HermesEnvironmentReport): string {
+        const hasVerifiedHermes = report.executables.some((item) => item.verified);
+        if (hasVerifiedHermes && !report.diagnostics.acpOk) {
+            return report.diagnostics.acpInstallAttempted
+                ? t('detectEnvironmentSummaryAcpManual')
+                : t('detectEnvironmentSummaryAcpBroken');
+        }
+        return t('detectEnvironmentBroken');
+    }
+
+    private _formatDetectSummaryForReport(report: HermesEnvironmentReport): string {
+        if (report.status === 'not_found') {
+            return t('detectEnvironmentSummaryInstall');
+        }
+        if (report.status === 'broken') {
+            const hasVerifiedHermes = report.executables.some((item) => item.verified);
+            if (hasVerifiedHermes && !report.diagnostics.acpOk) {
+                if (report.diagnostics.acpInstallAttempted) {
+                    return t('detectEnvironmentSummaryAcpManual');
+                }
+                return t('detectEnvironmentSummaryAcpBroken');
+            }
+            return t('detectEnvironmentSummaryBroken');
+        }
+        if (
+            report.recommendation.action === 'configure_plugin'
+            || report.recommendation.action === 'configure_system'
+        ) {
+            return t('detectEnvironmentSummaryConfigureViaMenu');
+        }
+        return t('detectEnvironmentSummaryReady');
+    }
+
+    private _recordDetectStep(event: HermesDetectProgressEvent): void {
+        const entry: DetectStepLogEntry = {
+            step: event.step,
+            label: this._detectStepLabel(event.step),
+            detail: this._formatDetectStepDetail(event),
+            status: event.status,
+        };
+        const index = this._detectStepLog.findIndex((item) => item.step === event.step);
+        if (index >= 0) {
+            this._detectStepLog[index] = entry;
+        } else {
+            this._detectStepLog.push(entry);
+        }
+    }
+
+    private async _runEnvironmentDetectionWithUi(
+        configuredPath?: string,
+        mode: 'connect' | 'manual' = 'manual',
+    ): Promise<HermesEnvironmentReport> {
+        this._detectStepLog = [];
+        this._detectAbortController?.abort();
+        this._detectAbortController = new AbortController();
+        const signal = this._detectAbortController.signal;
+        this._setDetectContext(true, !!this._lastDetectReport);
+        this._postMessage({ type: 'detectEnvironmentStart', mode });
+
+        const report = await detectHermesEnvironment(configuredPath, {
+            signal,
+            onProgress: (event) => {
+                this._postDetectProgress(event);
+                this._recordDetectStep(event);
+            },
+        });
+        this._detectAbortController = undefined;
+
+        if (report.status === 'cancelled') {
+            this._setDetectContext(false, false);
+            return report;
+        }
+
+        this._logEnvironmentReport(report);
+        this._lastDetectReport = report;
+        const summaryStatus: HermesDetectStepStatus = report.status === 'ready' ? 'ok' : 'fail';
+        const summaryText = this._formatDetectSummaryForReport(report);
+        const summaryEvent: HermesDetectProgressEvent = {
+            step: 'summary',
+            status: summaryStatus,
+            reportStatus: report.status,
+            detail: summaryText,
+        };
+        this._recordDetectStep(summaryEvent);
+        this._postDetectProgress(summaryEvent);
+        this._postMessage({
+            type: 'detectEnvironmentEnd',
+            status: report.status,
+            mode,
+            brief: this._formatDetectProgressDisplay('100%'),
+            summaryStatus,
+        });
+        this._setDetectContext(false, true);
+        return report;
+    }
+
+    public async detectEnvironment(): Promise<void> {
+        if (this._detectInProgress) {
+            return;
+        }
+        this._log('Environment detection requested');
+        const config = vscode.workspace.getConfiguration('hermes');
+        const configuredPath = config.get<string>('path') || undefined;
+        const report = await this._runEnvironmentDetectionWithUi(configuredPath, 'manual');
+
+        if (report.status === 'cancelled') {
+            return;
+        }
+        if (report.status === 'not_found') {
+            await vscode.window.showErrorMessage(t('detectEnvironmentNotFound'));
+            return;
+        }
+        if (report.status === 'broken') {
+            await vscode.window.showErrorMessage(this._formatDetectBrokenMessage(report));
+            return;
+        }
+    }
+
+    public async configureEnvironment(): Promise<void> {
+        if (this._detectInProgress) {
+            return;
+        }
+        let report = this._lastDetectReport;
+        if (!report) {
+            const config = vscode.workspace.getConfiguration('hermes');
+            const configuredPath = config.get<string>('path') || undefined;
+            report = await this._runEnvironmentDetectionWithUi(configuredPath, 'manual');
+        }
+        if (report.status === 'cancelled') {
+            return;
+        }
+        if (report.status === 'not_found') {
+            await vscode.window.showErrorMessage(t('detectEnvironmentNotFound'));
+            return;
+        }
+        if (report.status === 'broken') {
+            await vscode.window.showErrorMessage(this._formatDetectBrokenMessage(report));
+            return;
+        }
+        const executable = await this._offerHermesConfiguration(report);
+        if (executable) {
+            await this._connect(this._activeSelectionId || undefined);
+        }
+    }
+
+    private _pickBestExecutable(report: HermesEnvironmentReport): string | undefined {
+        const verified = report.executables.filter((item) => item.verified);
+        const pool = verified.length > 0 ? verified : report.executables;
+        return pool[0]?.path;
+    }
+
+    private _shouldOfferHermesConfiguration(report: HermesEnvironmentReport): boolean {
+        if (!this._pickBestExecutable(report)) {
+            return false;
+        }
+        const workspaceConfig = vscode.workspace.getConfiguration('hermes');
+        const configuredPath = workspaceConfig.get<string>('path')?.trim();
+        const pluginConfigValid = !!configuredPath && report.executables.some(
+            (item) => item.source === 'config' && item.verified,
+        );
+        const onSystemPath = report.executables.some(
+            (item) => item.source === 'path_lookup' && item.verified,
+        );
+        return !(pluginConfigValid || onSystemPath);
+    }
+
+    private async _offerHermesConfiguration(report: HermesEnvironmentReport): Promise<string | undefined> {
+        const executable = await this._pickDetectedHermesExecutable(report.executables);
+        if (!executable) {
+            return undefined;
+        }
+        const action = await this._pickHermesConfigureAction(executable);
+        if (action === 'plugin') {
+            await this._configureHermesPluginPath(executable);
+            return executable;
+        }
+        if (action === 'system') {
+            await this._configureHermesSystemPath(executable);
+            return executable;
+        }
+        return undefined;
+    }
+
+    private _logEnvironmentReport(report: HermesEnvironmentReport): void {
+        const lines = [
+            `Detect status=${report.status} install=${report.installMethod ?? 'unknown'}`,
+            `pip=${report.diagnostics.pipInstalled} pythonImport=${report.diagnostics.pythonImportOk}`,
+            `candidates=${report.executables.length}`,
+        ];
+        for (const item of report.executables) {
+            lines.push(`  [${item.source}] ${item.path} verified=${item.verified}${item.version ? ` (${item.version})` : ''}`);
+        }
+        this._log(lines.join('\n'));
+    }
+
+    private _detectSourceLabel(source: HermesDetectSource): string {
+        const keyMap: Record<HermesDetectSource, keyof import('../i18n/types').LocaleStrings> = {
+            config: 'detectEnvironmentSourceConfig',
+            path_lookup: 'detectEnvironmentSourcePathLookup',
+            known_path: 'detectEnvironmentSourceKnownPath',
+            pip: 'detectEnvironmentSourcePip',
+            python_import: 'detectEnvironmentSourcePythonImport',
+            hermes_home: 'detectEnvironmentSourceHermesHome',
+        };
+        return t(keyMap[source]);
+    }
+
+    private async _pickDetectedHermesExecutable(
+        executables: HermesExecutableCandidate[],
+    ): Promise<string | undefined> {
+        const verified = executables.filter((item) => item.verified);
+        const pool = verified.length > 0 ? verified : executables;
+        if (pool.length === 1) {
+            return pool[0].path;
+        }
+        const picked = await vscode.window.showQuickPick(
+            pool.map((item) => {
+                const statusLabel = item.verified
+                    ? t('detectEnvironmentCandidateVerified')
+                    : t('detectEnvironmentCandidateUnverified');
+                const versionSuffix = item.version ? ` · ${item.version}` : '';
+                return {
+                    label: path.basename(item.path),
+                    description: `${item.path} · ${this._detectSourceLabel(item.source)} · ${statusLabel}${versionSuffix}`,
+                    executable: item.path,
+                };
+            }),
+            {
+                title: t('detectEnvironmentPickExecutable'),
+                placeHolder: t('detectEnvironmentPickExecutable'),
+            },
+        );
+        return picked?.executable;
+    }
+
+    private async _pickHermesConfigureAction(executable: string): Promise<'plugin' | 'system' | undefined> {
+        const picked = await vscode.window.showQuickPick(
+            [
+                {
+                    label: t('detectEnvironmentConfigurePlugin'),
+                    description: t('detectEnvironmentConfigurePluginDesc'),
+                    action: 'plugin' as const,
+                },
+                {
+                    label: t('detectEnvironmentConfigureSystem'),
+                    description: t('detectEnvironmentConfigureSystemDesc'),
+                    action: 'system' as const,
+                },
+            ],
+            {
+                title: t('detectEnvironmentConfigureTitle'),
+                placeHolder: executable,
+            },
+        );
+        return picked?.action;
+    }
+
+    private async _configureHermesPluginPath(executable: string): Promise<void> {
+        const config = vscode.workspace.getConfiguration('hermes');
+        await config.update('path', executable, vscode.ConfigurationTarget.Global);
+        this._log(`Configured hermes.path: ${executable}`);
+        void vscode.window.showInformationMessage(t('detectEnvironmentPluginConfigured', executable));
+    }
+
+    private async _configureHermesSystemPath(executable: string): Promise<void> {
+        try {
+            const result = addHermesDirectoryToSystemPath(executable);
+            if (result.alreadyPresent) {
+                void vscode.window.showInformationMessage(
+                    t('detectEnvironmentSystemAlreadyConfigured', result.pathEntry),
+                );
+                return;
+            }
+            const target = result.profileFile || result.pathEntry;
+            const message = t('detectEnvironmentSystemConfigured', result.pathEntry, target);
+            const restart = t('detectEnvironmentSystemNeedsRestart');
+            const choice = await vscode.window.showInformationMessage(message, restart);
+            if (choice === restart) {
+                void vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this._log(`System PATH configuration failed: ${msg}`);
+            await vscode.window.showErrorMessage(msg);
+        }
     }
 
     private _buildFallbackModelList(): ModelListState | null {
@@ -2047,6 +2552,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     public dispose(): void {
         this._saveCurrentSession();
         this._cancelPendingPermissions();
+        this._clearViewDetectProgress();
         this._acp?.dispose();
         this._acp = undefined;
         this._view = undefined;
@@ -2145,21 +2651,23 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
     }
 
     private async _openSettings(): Promise<void> {
-        const useJsonEditor = vscode.workspace
+        const preferJsonEditor = vscode.workspace
             .getConfiguration('workbench.settings')
             .get<string>('editor') === 'json';
         const isCursor = /cursor/i.test(vscode.env.appName);
 
-        // Cursor's Settings UI refreshes built-in custom agents on open; rapid cancel/reload
-        // surfaces "Failed to load custom agents" / ERR Canceled in DevTools.
-        if (useJsonEditor || isCursor) {
+        // Cursor: always open Settings UI (JSON editor command often does nothing visible).
+        if (preferJsonEditor && !isCursor) {
             await vscode.commands.executeCommand('workbench.action.openSettingsJson', {
                 revealSetting: { key: 'hermes.path', edit: false },
             });
             return;
         }
 
-        await vscode.commands.executeCommand('workbench.action.openSettings', 'hermes:');
+        await vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            `@ext:${this._extensionId}`,
+        );
     }
 
     private async _onConfigurationChanged(e: vscode.ConfigurationChangeEvent): Promise<void> {

@@ -100,6 +100,7 @@ Visit [app.jove-rina.top](https://app.jove-rina.top) for guides, tips, and relat
 
 ### Visibility & diagnostics
 
+- **Environment detection & configuration** — Wrench menu: scan Hermes install (L0–L5), verify `hermes --version`, check `hermes acp --check`, auto-install `agent-client-protocol` when missing; compact percentage progress in the toolbar
 - **Token usage ring** — Input token usage indicator in the toolbar
 - **Local history badge** — When switching sessions, UI marks messages restored from local storage (agent context is reset)
 - **Thoughts & tool calls** — Optionally show agent reasoning and tool notifications
@@ -161,7 +162,7 @@ If the agent does not provide a model list, configure fallback presets in Settin
 
 ### 8. Settings
 
-Open **Settings** (`Ctrl+,` / `Cmd+,`) and search for **Hermes**:
+Open **Settings** (`Ctrl+,` / `Cmd+,`) and search for **Hermes**, or use **More options → Settings** in the chat view title bar (opens extension settings directly):
 
 | Setting | Description | Default |
 |---------|-------------|---------|
@@ -199,9 +200,11 @@ Changes to connection-related settings trigger an automatic reconnect.
 
 | Symptom | What to try |
 |---------|-------------|
-| Stuck on **Connecting…** | Ensure `hermes` is on PATH or set `hermes.path`; run `hermes acp` manually to check for errors |
+| Stuck on **Connecting…** | Open **Environment → Environment detection** from the wrench menu; ensure `hermes` is on PATH or set `hermes.path` |
+| **ACP dependencies missing** | Detection tries `pip install agent-client-protocol==0.9.0` automatically; if it still fails, run `hermes acp --check` and `hermes acp` in a terminal |
 | **Connection error** | Click **Retry** in the toolbar; check Hermes logs via **More options → Logs** |
 | Model not listed | Add entries under `hermes.models` in Settings |
+| **Settings** not opening in Cursor | Use **More options → Settings** in the chat view title bar |
 | UI not in expected language | Set VS Code display language; switch away from and back to the Hermes sidebar |
 
 ---
@@ -216,7 +219,7 @@ We welcome issues, feature requests, and pull requests.
 2. Click **New issue**
 3. Include:
    - VS Code version
-   - Extension version (`0.3.0` or later)
+   - Extension version (`0.3.1` or later)
    - Hermes Agent version (`hermes --version`)
    - Steps to reproduce
    - Expected vs. actual behavior

@@ -1,7 +1,26 @@
 import { spawn } from 'child_process';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import {
+    accessExecutable,
+    hermesNotFoundMessage,
+} from './hermesPaths';
+import { scanHermesExecutables } from './hermesEnvironmentDetect';
+
+export { buildHermesExecutableCandidates } from './hermesPaths';
+export {
+    detectHermesEnvironment,
+    scanHermesExecutables,
+    tryResolveHermesQuick,
+} from './hermesEnvironmentDetect';
+export type {
+    HermesDetectProgressEvent,
+    HermesDetectSource,
+    HermesDetectStepId,
+    HermesDetectStepStatus,
+    HermesEnvironmentReport,
+    HermesEnvironmentStatus,
+    HermesExecutableCandidate,
+    HermesInstallMethod,
+} from './hermesEnvironmentDetect';
 
 /** Parse ``hermes profile list`` table output into profile ids (default first). */
 export function parseProfileListOutput(output: string): string[] {
@@ -30,43 +49,24 @@ export function parseProfileListOutput(output: string): string[] {
 
 export async function findHermesExecutable(hermesPath?: string): Promise<string | null> {
     if (hermesPath?.trim()) {
-        try {
-            await fs.promises.access(hermesPath.trim());
+        if (await accessExecutable(hermesPath.trim())) {
             return hermesPath.trim();
-        } catch {
-            return null;
         }
+        return null;
     }
 
-    const candidates = [
-        'hermes',
-        path.join(os.homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'hermes'),
-        path.join(os.homedir(), '.hermes', 'hermes-agent', 'venv', 'Scripts', 'hermes.exe'),
-        '/usr/local/bin/hermes',
-        '/opt/homebrew/bin/hermes',
-    ];
+    const scanned = await scanHermesExecutables();
+    return scanned[0] ?? null;
+}
 
-    const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-
-    for (const cmd of candidates) {
-        try {
-            if (path.isAbsolute(cmd)) {
-                await fs.promises.access(cmd);
-                return cmd;
-            }
-            const found = await new Promise<boolean>((resolve) => {
-                const proc = spawn(whichCmd, [cmd], { stdio: 'ignore', shell: process.platform === 'win32' });
-                proc.on('exit', (code) => resolve(code === 0));
-                proc.on('error', () => resolve(false));
-            });
-            if (found) {
-                return cmd;
-            }
-        } catch {
-            continue;
-        }
+export async function findHermesExecutableOrThrow(hermesPath?: string): Promise<string> {
+    const resolved = hermesPath
+        ? await findHermesExecutable(hermesPath)
+        : await findHermesExecutable();
+    if (!resolved) {
+        throw new Error(hermesNotFoundMessage());
     }
-    return null;
+    return resolved;
 }
 
 export function runHermesCommand(executable: string, args: string[]): Promise<string> {

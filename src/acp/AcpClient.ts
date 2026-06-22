@@ -1,8 +1,5 @@
 import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
 import {
     client,
     ndJsonStream,
@@ -23,6 +20,7 @@ import {
 } from './modelConfig';
 import type { SessionMcpServer } from './mcpConfig';
 import { normalizeHermesCliProfile } from './hermesProfile';
+import { findHermesExecutableOrThrow } from './profileDiscovery';
 import type { AcpModelOptionsResponse } from './acpModelCatalog';
 import {
     ToolCallTracker,
@@ -267,8 +265,7 @@ export class AcpClient {
         }
 
         try {
-            const resolvedPath = hermesPath || await this._findHermes();
-            if (!resolvedPath) throw new Error('Hermes executable not found');
+            const resolvedPath = await findHermesExecutableOrThrow(hermesPath);
 
             const profile = normalizeHermesCliProfile(hermesProfile);
             const args = ['acp', '--profile', profile];
@@ -897,39 +894,6 @@ export class AcpClient {
             };
         }
         this._onModelsChanged(this._modelListState);
-    }
-
-    private async _findHermes(): Promise<string> {
-        const candidates = [
-            'hermes',
-            path.join(os.homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'hermes'),
-            '/usr/local/bin/hermes',
-            '/opt/homebrew/bin/hermes',
-        ];
-
-        const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-
-        for (const cmd of candidates) {
-            try {
-                if (path.isAbsolute(cmd)) {
-                    await fs.promises.access(cmd, fs.constants.X_OK);
-                    return cmd;
-                }
-                const found = await new Promise<boolean>((resolve) => {
-                    const proc = spawn(whichCmd, [cmd], { stdio: 'ignore' });
-                    proc.on('exit', (code) => resolve(code === 0));
-                    proc.on('error', () => resolve(false));
-                });
-                if (found) return cmd;
-            } catch {
-                continue;
-            }
-        }
-
-        throw new Error(
-            'Hermes not found. Install:\n' +
-            '  curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash'
-        );
     }
 
     /** Finalize the current assistant/thought stream so the next chunk starts fresh. */

@@ -1,7 +1,8 @@
 import * as assert from 'assert';
+import { describe, it } from 'mocha';
 import { classifyLogLevel } from '../../logLevel';
 
-suite('logLevel', () => {
+describe('logLevel', () => {
     it('classifies error lines', () => {
         assert.strictEqual(classifyLogLevel('ERROR: connection refused'), 'error');
         assert.strictEqual(classifyLogLevel('Connect failed: timeout'), 'error');
