@@ -1,0 +1,29 @@
+:root {
+    --bg: var(--vscode-sideBar-background, #1e1e1e);
+    --fg: var(--vscode-sideBar-foreground, #cccccc);
+    --input-bg: var(--vscode-input-background, #3c3c3c);
+    --input-fg: var(--vscode-input-foreground, #cccccc);
+    --border: var(--vscode-panel-border, #333333);
+    --primary: var(--vscode-button-background, #0078d4);
+    --primary-hover: var(--vscode-button-hoverBackground, #1e8ad6);
+    --primary-fg: var(--vscode-button-foreground, #ffffff);
+    --error: var(--vscode-errorForeground, #f48771);
+    --text-block: var(--vscode-textBlockQuote-background, #2d2d2d);
+    --dim: var(--vscode-descriptionForeground, #888888);
+    --assistant-bg: color-mix(in srgb, var(--primary) 14%, var(--text-block));
+    --assistant-border: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    container-type: inline-size;
+    container-name: app;
+}
+

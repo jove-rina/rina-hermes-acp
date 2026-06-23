@@ -1,0 +1,188 @@
+/* FAQ accordion */
+.faq-modal-body {
+    padding: 10px 12px;
+}
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.faq-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--fg) 3%, transparent);
+    overflow: hidden;
+}
+.faq-item[open] {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.faq-summary {
+    cursor: pointer;
+    padding: 10px 12px 10px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--fg);
+    list-style: none;
+    position: relative;
+    user-select: none;
+}
+.faq-summary::-webkit-details-marker,
+.faq-summary::marker {
+    display: none;
+    content: '';
+}
+.faq-summary::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--dim);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(-50%);
+    transition: transform 0.15s ease;
+}
+.faq-item[open] > .faq-summary {
+    color: var(--primary);
+}
+.faq-item[open] > .faq-summary::before {
+    transform: translateY(-50%) rotate(90deg);
+    border-left-color: var(--primary);
+}
+.faq-body {
+    padding: 2px 12px 12px;
+    border-top: 1px solid var(--border);
+    color: var(--dim);
+}
+.faq-body p {
+    margin: 0 0 8px;
+    color: var(--dim);
+}
+.faq-body ul {
+    margin: 0 0 8px;
+    padding-left: 18px;
+}
+.faq-body li {
+    margin-bottom: 4px;
+    color: var(--dim);
+}
+.faq-body strong {
+    color: color-mix(in srgb, var(--fg) 80%, var(--dim));
+    font-weight: 600;
+}
+.faq-body a {
+    color: var(--primary);
+}
+.faq-body code {
+    color: color-mix(in srgb, var(--fg) 65%, var(--dim));
+}
+.faq-body .dim {
+    color: color-mix(in srgb, var(--dim) 90%, transparent);
+}
+.faq-body pre {
+    background: var(--vscode-textCodeBlock-background, #1e1e1e);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 6px 0 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.dropdown-item {
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover { background: var(--text-block); }
+.dropdown-item.active { color: var(--primary); }
+.dropdown-item .meta {
+    font-size: 10px;
+    color: var(--dim);
+    white-space: nowrap;
+}
+.dropdown-item.disabled {
+    color: var(--dim);
+    cursor: default;
+    font-style: italic;
+}
+.dropdown-group-label {
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+.icon-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: relative;
+    line-height: 1.4;
+    min-height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon-btn:hover {
+    color: var(--fg);
+    border-color: var(--primary);
+}
+.toolbar-btn {
+    background: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    min-height: 26px;
+    line-height: 1.4;
+}
+.toolbar-btn:hover {
+    border-color: var(--primary);
+    color: var(--fg);
+}
+.toolbar-btn.primary {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: var(--primary);
+    font-weight: 600;
+}
+.toolbar-btn.primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 4px;
+    line-height: 1;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.delete-btn:hover { color: var(--error); }
+

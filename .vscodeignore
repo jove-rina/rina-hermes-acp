@@ -12,3 +12,6 @@ CODE_REVIEW*.md
 out/tests/
 docs/**
 media/icon.svg
+media/src/**
+media/chat.html.template
+scripts/**

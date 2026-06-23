@@ -1,0 +1,116 @@
+/* Modals — responsive shell */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    padding: clamp(8px, 3vw, 20px);
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.is-open {
+    display: flex;
+}
+.modal-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 100%;
+    max-width: min(600px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    max-height: min(85vh, 100%);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+    min-width: 0;
+}
+.modal-header-title {
+    font-weight: 600;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.modal-header-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--fg);
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+.modal-close-btn {
+    background: none !important;
+    border: none !important;
+    color: var(--dim) !important;
+    font-size: 16px !important;
+    padding: 0 4px !important;
+}
+
+/* ---- Responsive (sidebar width) ---- */
+@container app (max-width: 420px) {
+    .picker-btn .picker-label { display: none; }
+    .picker-btn { max-width: 96px; padding: 3px 6px; }
+    .toolbar-status #statusText { max-width: 64px; }
+    .session-tab { max-width: 120px; padding: 6px 8px; }
+    #messages { padding: 6px 8px; }
+    #input-area { padding: 6px 8px; }
+    .message { max-width: 100%; }
+}
+
+@container app (max-width: 340px) {
+    #toolbar { padding: 4px 6px; gap: 4px; }
+    .toolbar-status #statusText { display: none; }
+    .picker-btn { max-width: 72px; font-size: 10px; }
+    .toolbar-btn { padding: 4px 7px; font-size: 10px; min-height: 24px; }
+    .new-label-full { display: none; }
+    .new-label-short { display: inline; }
+    .session-tab { max-width: 96px; font-size: 10px; }
+    .input-action button { min-width: 48px; padding: 6px 10px; font-size: 11px; }
+    .placeholder { padding: 20px 12px; font-size: 11px; }
+}
+
+@container app (max-width: 260px) {
+    .toolbar-pickers { gap: 2px; }
+    .picker-btn { max-width: 56px; }
+    .toolbar-actions { gap: 2px; }
+    .input-composite textarea { padding: 6px 8px; min-height: 32px; }
+    .input-action { padding: 3px; }
+    .input-action button { min-width: 40px; padding: 5px 8px; }
+    .message .label { font-size: 10px; }
+    .message pre { font-size: 11px; padding: 8px; }
+}
+
+/* Fallback for hosts without container queries */
+@media (max-width: 420px) {
+    .picker-btn .picker-label { display: none; }
+    .picker-btn { max-width: 96px; }
+    .session-tab { max-width: 120px; }
+    .message { max-width: 100%; }
+}
+@media (max-width: 340px) {
+    .toolbar-status #statusText { display: none; }
+    .new-label-full { display: none; }
+    .new-label-short { display: inline; }
+}

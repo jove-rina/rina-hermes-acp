@@ -1,0 +1,235 @@
+/* Session tabs */
+#tab-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    min-height: 32px;
+    background: var(--bg);
+}
+#tab-bar::-webkit-scrollbar {
+    height: 4px;
+}
+.session-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--dim);
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 160px;
+    flex-shrink: 0;
+    background: transparent;
+    border-top: 2px solid transparent;
+    user-select: none;
+}
+.session-tab[draggable="true"] {
+    cursor: grab;
+}
+.session-tab.dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+}
+.session-tab.drag-over {
+    box-shadow: inset 0 -2px 0 var(--primary);
+}
+.session-tab:hover {
+    color: var(--fg);
+    background: var(--text-block);
+}
+.session-tab.active {
+    color: var(--fg);
+    background: var(--text-block);
+    border-top-color: var(--primary);
+}
+.session-tab .tab-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.session-tab .tab-title-input {
+    font-size: 11px;
+    font-family: inherit;
+    background: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--primary);
+    border-radius: 2px;
+    padding: 0 4px;
+    min-width: 48px;
+    max-width: 120px;
+    width: 100%;
+    outline: none;
+    line-height: 1.4;
+}
+.session-tab.editing {
+    max-width: 200px;
+}
+.session-tab .tab-close {
+    opacity: 0.5;
+    font-size: 12px;
+    padding: 0 2px;
+    line-height: 1;
+}
+.session-tab .tab-close:hover {
+    opacity: 1;
+    color: var(--error);
+}
+.session-tab .tab-pin-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    opacity: 0.85;
+    line-height: 1;
+}
+.session-tab .tab-pin-icon svg {
+    width: 11px;
+    height: 11px;
+    fill: currentColor;
+    display: block;
+}
+#tab-bar .tab-pin-separator {
+    align-self: stretch;
+    width: 1px;
+    background: color-mix(in srgb, var(--primary) 35%, var(--border));
+    flex-shrink: 0;
+    margin: 4px 0;
+}
+.tab-context-menu {
+    position: fixed;
+    z-index: 300;
+    min-width: 220px;
+    max-width: 320px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    padding: 4px 0;
+    font-size: 12px;
+}
+.tab-context-menu[hidden] {
+    display: none !important;
+}
+.tab-context-menu .tab-ctx-sid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    color: var(--dim);
+    font-size: 11px;
+    user-select: text;
+}
+.tab-context-menu .tab-ctx-sid-label {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--fg);
+}
+.tab-context-menu .tab-ctx-sid-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.tab-context-menu .tab-ctx-sid-copy {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    line-height: 1;
+}
+.tab-context-menu .tab-ctx-sid-copy:hover {
+    color: var(--primary);
+    background: var(--text-block);
+}
+.tab-context-menu .tab-ctx-sid-copy svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+.tab-context-menu .tab-ctx-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--fg);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    padding: 6px 12px;
+    line-height: 1.3;
+}
+.tab-context-menu .tab-ctx-item:hover:not(:disabled) {
+    background: var(--text-block);
+}
+.tab-context-menu .tab-ctx-item:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.tab-context-menu .tab-ctx-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--border);
+}
+.local-history-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 12px;
+    font-size: 11px;
+    color: var(--dim);
+    line-height: 1.4;
+}
+.local-history-divider::before,
+.local-history-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+.log-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--dim);
+    cursor: pointer;
+    user-select: none;
+}
+.log-filter input {
+    margin: 0;
+    cursor: pointer;
+}
+.log-line-error {
+    color: #f48771;
+}
+.log-line-warning {
+    color: #cca700;
+}
+#copyLogBtn.copied {
+    color: var(--primary);
+    border-color: var(--primary);
+    animation: log-copy-flash 0.35s ease;
+}
+@keyframes log-copy-flash {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+}
+

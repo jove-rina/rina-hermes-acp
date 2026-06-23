@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{HIGHLIGHT_CSS_URI}}">
+<link rel="stylesheet" href="{{CHAT_CSS_URI}}">
+<script src="{{MARKED_URI}}"></script>
+<script src="{{PURIFY_URI}}"></script>
+<script src="{{HIGHLIGHT_URI}}"></script>
+</head>
+<body>
+{{BODY}}
+<script>window.__HERMES_LOCALE__ = {{LOCALE_JSON}};</script>
+<script>{{LOCALE_HELPER}}</script>
+<script src="{{CHAT_JS_URI}}"></script>
+</body>
+</html>

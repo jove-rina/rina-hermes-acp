@@ -229,7 +229,11 @@
         "hermes.contextAttachVisibility": {
           "type": "string",
           "default": "onNewSession",
-          "enum": ["onNewSession", "always", "never"],
+          "enum": [
+            "onNewSession",
+            "always",
+            "never"
+          ],
           "enumDescriptions": [
             "%configuration.hermes.contextAttachVisibility.onNewSession.description%",
             "%configuration.hermes.contextAttachVisibility.always.description%",
@@ -245,10 +249,17 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "name": { "type": "string" }
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
             },
-            "required": ["id", "name"]
+            "required": [
+              "id",
+              "name"
+            ]
           }
         },
         "hermes.defaultModel": {
@@ -264,12 +275,22 @@
           "items": {
             "type": "object",
             "properties": {
-              "name": { "type": "string" },
-              "path": { "type": "string" },
-              "profile": { "type": "string" },
-              "cwd": { "type": "string" }
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "profile": {
+                "type": "string"
+              },
+              "cwd": {
+                "type": "string"
+              }
             },
-            "required": ["name"]
+            "required": [
+              "name"
+            ]
           }
         }
       }
@@ -277,8 +298,11 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "npm run build:webview && tsc -p ./",
+    "build:webview": "node ./scripts/build-webview.mjs",
+    "init:webview": "node ./scripts/init-webview-src.mjs",
     "watch": "tsc -watch -p ./",
+    "watch:webview": "node ./scripts/build-webview.mjs --watch",
     "package": "vsce package",
     "test": "node ./out/tests/runTest.js"
   },
@@ -287,6 +311,7 @@
     "@types/node": "^26.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^3.0.0",
+    "esbuild": "^0.25.12",
     "mocha": "^11.7.6",
     "typescript": "^5.4.0"
   },
