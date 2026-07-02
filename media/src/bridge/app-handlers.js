@@ -1,0 +1,90 @@
+import { LOCAL_HISTORY_DIVIDER_ID } from '../core/dom-refs.js';
+import { setLocale } from '../core/locale.js';
+import { copyToClipboard } from '../utils/clipboard.js';
+import { downloadSessionMarkdown } from '../messages/group-utils.js';
+import { createEnvironmentHandlers } from './handlers/environment.js';
+import { createMessageHandlers } from './handlers/messages.js';
+import { createUiHandlers } from './handlers/ui.js';
+import { createSimpleHandlers } from './handlers/simple.js';
+
+/** @param {Record<string, unknown>} deps */
+export function createAppHandlers(deps) {
+    return {
+        ...createEnvironmentHandlers({ placeholder: deps.placeholder }),
+        ...createMessageHandlers({
+            isMessageForActiveSession: deps.isMessageForActiveSession,
+            addMessage: deps.addMessage,
+            handleToolMessage: deps.handleToolMessage,
+            getThoughtMsgId: deps.getThoughtMsgId,
+            setThoughtMsgId: deps.setThoughtMsgId,
+            setAuxiliaryContent: deps.setAuxiliaryContent,
+            setAuxMessageLive: deps.setAuxMessageLive,
+            maybeScrollToBottom: deps.maybeScrollToBottom,
+            restoreHistory: deps.restoreHistory,
+            finalizeAssistantBubble: deps.finalizeAssistantBubble,
+            getIsPrompting: deps.getIsPrompting,
+            getAwaitingFirstChunk: deps.getAwaitingFirstChunk,
+            setInputMode: deps.setInputMode,
+            showPermissionRequest: deps.showPermissionRequest,
+            pendingPermissions: deps.pendingPermissions,
+            updatePermissionContent: deps.updatePermissionContent,
+            dismissPermissionRequest: deps.dismissPermissionRequest,
+            getLocale: deps.getLocale,
+        }),
+        ...createUiHandlers({
+            isMessageForActiveSession: deps.isMessageForActiveSession,
+            setConnectionAttempted: deps.setConnectionAttempted,
+            updateStatus: deps.updateStatus,
+            setIsPrompting: deps.setIsPrompting,
+            setAwaitingFirstChunk: deps.setAwaitingFirstChunk,
+            resetToolAggregation: deps.resetToolAggregation,
+            finishStreaming: deps.finishStreaming,
+            setCanSend: deps.setCanSend,
+            inputEl: deps.inputEl,
+            setInputMode: deps.setInputMode,
+            placeholder: deps.placeholder,
+            scheduleSessionMarkdownRender: deps.scheduleSessionMarkdownRender,
+            maybeFocusInputAfterResponse: deps.maybeFocusInputAfterResponse,
+            getAwaitingFirstChunk: deps.getAwaitingFirstChunk,
+            resetAutoScrollFollow: deps.resetAutoScrollFollow,
+            updateTokenUsage: deps.updateTokenUsage,
+            getLocale: deps.getLocale,
+            buildConnectionErrorPlaceholder: deps.buildConnectionErrorPlaceholder,
+            bindConnectionErrorActions: deps.bindConnectionErrorActions,
+            setLocale,
+            refreshLocale: deps.refreshLocale,
+            getLastSessions: deps.getLastSessions,
+            getLastActiveSessionId: deps.getLastActiveSessionId,
+            renderSessionTabs: deps.renderSessionTabs,
+            LOCAL_HISTORY_DIVIDER_ID,
+            copyToClipboard,
+            downloadSessionMarkdown,
+            renderProfileList: deps.renderProfileList,
+            renderModelList: deps.renderModelList,
+            appendLog: deps.appendLog,
+            setPluginInfo: deps.setPluginInfo,
+            renderAboutContent: deps.renderAboutContent,
+            getFilePickerRequestId: deps.getFilePickerRequestId,
+            renderFilePickerItems: deps.renderFilePickerItems,
+            previewRequests: deps.previewRequests,
+            showFilePreview: deps.showFilePreview,
+            positionFilePreview: deps.positionFilePreview,
+            showContextAttachPicker: deps.showContextAttachPicker,
+            hideContextAttachPicker: deps.hideContextAttachPicker,
+            insertLocalHistoryDivider: deps.insertLocalHistoryDivider,
+        }),
+        ...createSimpleHandlers({
+            updateTokenUsage: deps.updateTokenUsage,
+            newChat: deps.newChat,
+            clearChat: deps.clearChat,
+            insertIntoInput: deps.insertIntoInput,
+            renderSessionTabs: deps.renderSessionTabs,
+            openLogModal: deps.openLogModal,
+            renderAboutContent: deps.renderAboutContent,
+            showModal: deps.showModal,
+            aboutModal: deps.aboutModal,
+            helpModal: deps.helpModal,
+            faqModal: deps.faqModal,
+        }),
+    };
+}

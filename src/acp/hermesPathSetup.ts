@@ -47,7 +47,7 @@ export function sanitizeWindowsPathEntry(entry: string): string {
 export function normalizeWindowsUserPath(pathValue: string): string {
     const seen = new Set<string>();
     const entries: string[] = [];
-    for (const raw of splitPathEntries(pathValue)) {
+    for (const raw of pathValue.split(';').map((entry) => entry.trim()).filter(Boolean)) {
         const sanitized = sanitizeWindowsPathEntry(raw);
         const key = sanitized.toLowerCase();
         if (seen.has(key)) {

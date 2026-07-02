@@ -34,6 +34,7 @@ import {
     rebuildAggregatedToolText,
 } from './toolAggregate';
 import { classifyLogLevel, LogLevel } from '../logLevel';
+import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from '../shared/webview-protocol';
 import {
     composePromptWithContext,
     ContextAttachOption,
@@ -244,7 +245,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        webviewView.webview.onDidReceiveMessage((message) => {
+        webviewView.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
             switch (message.type) {
                 case 'sendMessage':
                     this._enqueueChatOp(() => this._handleUserMessage(message.text, message.contextAttach));
@@ -487,7 +488,9 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._acpBoundSessionId = this._sessionId;
     }
 
-    private _postPromptScopedMessage(msg: Record<string, unknown>): void {
+    private _postPromptScopedMessage(
+        msg: Omit<Extract<ExtensionToWebviewMessage, { type: 'addMessage' }>, 'sessionId'>,
+    ): void {
         if (!this._isViewingPromptSession()) {
             return;
         }
@@ -2780,7 +2783,7 @@ export class HermesChatProvider implements vscode.WebviewViewProvider {
         this._output.dispose();
     }
 
-    private _postMessage(msg: any): void {
+    private _postMessage(msg: ExtensionToWebviewMessage): void {
         this._view?.webview.postMessage(msg);
     }
 

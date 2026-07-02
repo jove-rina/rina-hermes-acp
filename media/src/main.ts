@@ -1,4 +1,4 @@
 /**
- * Webview entry — Step 1 wraps the legacy IIFE body from chat-app.js.
+ * Webview entry — loads the chat application (Step 2: modular imports).
  */
 import './chat-app.js';
